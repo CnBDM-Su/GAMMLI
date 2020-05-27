@@ -51,7 +51,9 @@ class LV_XNN:
                  multi_type_num=0,
                  u_group_num=0,
                  i_group_num=0,
-                 scale_ratio=1):
+                 scale_ratio=1,
+                 alpha=0.5,
+                 auto_tune=False):
 
         super(LV_XNN, self).__init__()
         
@@ -92,6 +94,8 @@ class LV_XNN:
         self.u_group_num = u_group_num
         self.i_group_num = i_group_num
         self.scale_ratio = scale_ratio
+        self.alpha = alpha
+        self.auto_tune = auto_tune
         
 
         simu_dir = "./results/gaminet/"
@@ -141,11 +145,11 @@ class LV_XNN:
         item_feature = item_feature[:,:-1]
         
         if self.u_group_num != 0:
-            self.u_group = self.main_effect_cluster(user_feature,self.u_group_num)
+            self.u_group, self.u_group_model = self.main_effect_cluster(user_feature,self.u_group_num)
         else:
             self.u_group=0
         if self.i_group_num != 0:
-            self.i_group = self.main_effect_cluster(item_feature,self.i_group_num)
+            self.i_group, self.i_group_model = self.main_effect_cluster(item_feature,self.i_group_num)
         else:
             self.i_group = 0
             
@@ -199,8 +203,8 @@ class LV_XNN:
         #mf fit
         if self.mf_max_iters !=0:
                 
-            self.lv_model = LatentVariable(max_rank=self.max_rank,max_iters=self.mf_max_iters,
-                                         max_tuning_iters=self.max_tuning_iters,change_mode=self.change_mode,
+            self.lv_model = LatentVariable(max_rank=self.max_rank,max_iters=self.mf_max_iters,alpha=self.alpha,
+                                         max_tuning_iters=self.max_tuning_iters,change_mode=self.change_mode,auto_tune=self.auto_tune,
                                          convergence_threshold=self.convergence_threshold,n_oversamples=self.n_oversamples
                                         ,u_group = self.u_group,i_group = self.i_group,scale_ratio=self.scale_ratio)
             model1 = self.lv_model
@@ -235,8 +239,14 @@ class LV_XNN:
             self.final_gam_model = self.gami_model
             self.final_mf_model = self.lv_model
             print('select best model: stop at lv model')
+            
+            
+        self.cur_rank = self.final_mf_model.cur_rank
+        self.match_i = self.final_mf_model.match_i
+        self.match_u = self.final_mf_model.match_u
+        self.var_u = self.final_mf_model.var_u
+        self.var_i = self.final_mf_model.var_i
               
-
     
     def predict(self,xx,Xi):
                
@@ -269,9 +279,6 @@ class LV_XNN:
     
     def mf_distance(self,threshold,u_i='user'):
         
-        self.cur_rank = self.final_mf_model.cur_rank
-        self.match_i = self.final_mf_model.match_i
-        self.match_u = self.final_mf_model.match_u
         if u_i == 'user':
             user = self.match_u
             dis,closest = self.get_distance(user)
@@ -306,7 +313,7 @@ class LV_XNN:
         gmm_pu = KMeans(group_num,n_jobs=-1).fit(x) 
         labels = gmm_pu.predict(x)
         
-        return labels
+        return labels, gmm_pu
     
     def get_distance(self,x):
         dis = {}
@@ -362,6 +369,25 @@ class LV_XNN:
         nx.draw_networkx_edges(G,pos,edgelist=draw_edge,width=2)
         nx.draw_networkx_edge_labels(G,pos,edge_labels=draw_edge)
         nx.draw_networkx_edges(G,pos,edgelist=e_labels,width=1,alpha=0.5,edge_color='b',style='dashed')
+        
+        
+    def cold_start_analysis(self,x,u_i,confi):
+        if u_i == 'user':
+            group = self.u_group_model.predict(x)
+            mean_g = self.match_u[group]
+            var_g = self.var_u[group]**0.5
+            
+        if u_i == 'item':
+            group = self.i_group_model.predict(x)
+            mean_g = self.match_i[group]
+            var_g = self.var_i[group]**0.5
+            
+        upper = mean_g + confi * var_g
+        lower = mean_g - confi * var_g
+        
+        return mean_g, var_g, upper, lower
+    
+
             
 
 

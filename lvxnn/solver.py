@@ -193,7 +193,7 @@ class Solver(object):
                     self.__class__.__name__,
                     type(X_filled)))
 
-        X_result,U,V,S,mae_record,valmae_record,match_u,match_i, ini_u = self.solve(X_filled, X_val, missing_mask,missing_val)
+        X_result,U,V,S,mae_record,valmae_record,match_u,match_i, ini_u, var_u, var_i, radius_u, radius_i= self.solve(X_filled, X_val, missing_mask,missing_val)
         if not isinstance(X_result, np.ndarray):
             raise TypeError(
                 "Expected %s.solve() to return NumPy array but got %s" % (
@@ -204,7 +204,7 @@ class Solver(object):
         print('change mode state :',self.change_mode)
         if self.change_mode==False:
             X_result[observed_mask] = X_original[observed_mask]
-        return X_result, U, V, S , mae_record , valmae_record , match_u , match_i, ini_u
+        return X_result, U, V, S , mae_record , valmae_record , match_u , match_i, ini_u, var_u, var_i, radius_u, radius_i
 
     def fit(self, X, y=None):
         """

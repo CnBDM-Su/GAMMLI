@@ -140,7 +140,7 @@ class SoftImpute(Solver):
                 compute_uv=True)
 
         if tuning:
-            U,V ,self.match_u, self.match_i= self.cluster_mean(U,V,self.u_group,self.i_group,self.u_max_d,self.i_max_d,self.scale_ratio)
+            U,V ,self.match_u, self.match_i,self.var_u, self.var_i, self.radius_u, self.radius_i = self.cluster_mean(U,V,self.u_group,self.i_group,self.u_max_d,self.i_max_d,self.scale_ratio)
         else:
             self.u_max_d,self.i_max_d = self.get_max_dis(U,V,self.u_group,self.i_group)
         s_thresh = np.maximum(s - shrinkage_value, 0)
@@ -281,29 +281,24 @@ class SoftImpute(Solver):
             
         if self.change_mode:
             X_filled = X_reconstruction
-        return X_filled, U_thresh, V_thresh, S_thresh ,self.mae_record, self.valmae_record, self.match_u, self.match_i, self.ini_u
+        return X_filled, U_thresh, V_thresh, S_thresh ,self.mae_record, self.valmae_record, self.match_u, self.match_i, self.ini_u, self.var_u, self.var_i, self.radius_u, self.radius_i
     
     def cluster_mean(self, u,v,u_group,i_group,u_max_d,i_max_d,scale_ratio):
         
         v=v.T
         match_u = dict()
         match_i = dict()
+        var_u = dict()
+        var_i = dict()
+        radius_u = dict()
+        radius_i = dict()
         
-        def center_move(point_t,max_d,avg,r):
+        def center_move(point_t,avg,r):
             if point_t.shape[0] ==1:
                 new = point_t
                 return new
-            d = []
-            for i in range(point_t.shape[0]):
-                d.append(np.sqrt(np.sum(np.square(point_t[i]-avg))))    
-            d=np.array(d).reshape(-1,1)
-
-            d_n = ((d-d.min())/(d.max()-d.min()))*r*max_d
-            if np.isnan(d_n).sum()!=0:
-                d_n = d
                     
-            new = (avg+(d_n/d)*(point_t-avg)).reshape(-1,1,3)
-
+            new = (r*point_t+(1-r)*avg).reshape(-1,1,3)
     
             return new
         
@@ -317,10 +312,13 @@ class SoftImpute(Solver):
             for i in range(point_t.shape[0]):
                 d.append(np.sqrt(np.sum(np.square(point_t[i]-avg))))    
             d=np.array(d).reshape(-1,1)
-            
+            count=0
             for j in range(point_t.shape[0]):
+                
                 if d[j] > max_d*r:
+                    count = count+1
                     new[j] = ((1-r)*(avg-point_t[j]))+point_t[j]
+            print(count)
             new = new.reshape(-1,1,3)
             
                     
@@ -333,12 +331,15 @@ class SoftImpute(Solver):
             for i in np.unique(u_group):
                 cus = np.argwhere(u_group==i)
                 group = u[cus,:].reshape(-1,u.shape[1])
-                avg = np.mean(group,axis=0)           
+                avg = np.mean(group,axis=0)
+                var = np.var(group,axis=0)
                 point_t = u[cus].reshape(-1,3)
                 #u[cus] = center_move(point_t,u_max_d[i],avg,scale_ratio)
                 u[cus] = center_restrict(point_t,u_max_d[i],avg,scale_ratio)
                 #u[cus] = avg
                 match_u[i] = avg
+                var_u[i] = var
+                radius_u[i] =u_max_d[i]*scale_ratio
             
                     
         if type(i_group) != int :
@@ -346,15 +347,18 @@ class SoftImpute(Solver):
                 cus = np.argwhere(i_group==j)
                 group = v[cus,:].reshape(-1,v.shape[1])
                 avg = np.mean(group,axis=0)
+                var = np.var(group,axis=0)
                 point_t = v[cus].reshape(-1,3)
                 #v[cus] = center_move(point_t,i_max_d[j],avg,scale_ratio)
                 v[cus] = center_restrict(point_t,i_max_d[j],avg,scale_ratio)
                 #v[cus] = avg
                 match_i[j] = avg
+                var_i[j] = var
+                radius_i[i] =i_max_d[j]*scale_ratio
         v=v.T
                 
                 
-        return u,v,match_u,match_i
+        return u,v,match_u,match_i,var_u,var_i, radius_u, radius_i
     
     def get_max_dis(self, u,v,u_group,i_group):
         v=v.T
@@ -386,9 +390,11 @@ class SoftImpute(Solver):
                 i_max_d.append(max_distance(point_t,avg))
                 #v[cus] = avg
 
-                
-                
+                                
         return u_max_d,i_max_d
+    
+
+
                     
                     
                 
