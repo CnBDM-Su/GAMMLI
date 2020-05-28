@@ -12,6 +12,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 class LatentVariable:
     def __init__(self,
+                 task_type=None,
                  mf_type='als',
                  shrinkage_value=None,
                  convergence_threshold=0.001,
@@ -31,7 +32,13 @@ class LatentVariable:
                  i_group = 0,
                  scale_ratio=1,
                  alpha=0.5,
-                 auto_tune=False):
+                 auto_tune=False,
+                 pred_tr=None,
+                 tr_y=None,
+                 pred_val=None,
+                 val_y=None,
+                 tr_Xi=None,
+                 val_Xi=None):
         """
         mf_type: string
             type two algorithms are implements, type="svd" or the default type="als". The
@@ -72,6 +79,7 @@ class LatentVariable:
             Print debugging info
         """
         super(LatentVariable, self).__init__()
+        self.task_type = task_type
         self.mf_type = mf_type
         self.fill_method = init_fill_method
         self.min_value = min_value
@@ -90,11 +98,18 @@ class LatentVariable:
         self.i_group = i_group
         self.scale_ratio = scale_ratio
         self.max_tuning_iters = max_tuning_iters
-        
+
         self.alpha = alpha
         self.auto_tune = auto_tune
+        
+        self.pred_tr=pred_tr
+        self.tr_y=tr_y
+        self.pred_val=pred_val
+        self.val_y=val_y
+        self.tr_Xi = tr_Xi
+        self.val_Xi = val_Xi
 
-    
+
     def fit(self,Xi,val_Xi,residual,residual_val,ui_shape):
 
         train_index = Xi
@@ -110,32 +125,39 @@ class LatentVariable:
         matrix_val[matrix_val==0] = np.nan
         matrix[matrix==0] = np.nan
         #matrix = BiScaler(tolerance=0.1).fit_transform(matrix)
-        
+
         matrix[matrix==0] = np.nan
         print('missing value counts:',np.isnan(matrix).sum())
         if self.auto_tune:
             self.auto_tuning(5,matrix,matrix_val)
         self.best_ratio = self.scale_ratio
-        X_filled_softimpute, self.u, self.v, self.s, self.mf_mae, self.mf_valmae, self.match_u, self.match_i, self.ini_u,self.var_u, self.var_i, self.radius_u, self.radius_i = SoftImpute(shrinkage_value=self.shrinkage_value,
-                                         convergence_threshold=self.convergence_threshold,
-                                         max_iters=self.max_iters,
-                                         max_tuning_iters = self.max_tuning_iters,
-                                         max_rank=self.max_rank,
-                                         n_oversamples = self.n_oversamples,
-                                         n_power_iterations=self.n_power_iterations,
-                                         init_fill_method=self.fill_method,
-                                         min_value=self.min_value,
-                                         max_value=self.max_value,
-                                         change_mode = self.change_mode,
-                                         normalizer=self.normalizer,
-                                         u_group = self.u_group,
-                                         i_group = self.i_group,
-                                         scale_ratio = self.best_ratio).fit_transform(matrix,matrix_val)
+        X_filled_softimpute, self.u, self.v, self.s, self.mf_mae, self.mf_valmae, self.match_u, self.match_i, self.ini_u,self.var_u, self.var_i, self.radius_u, self.radius_i = SoftImpute(task_type = self.task_type,
+                                                                                                                                                                                           shrinkage_value=self.shrinkage_value,
+                                                                                                                                                                                           convergence_threshold=self.convergence_threshold,
+                                                                                                                                                                                           max_iters=self.max_iters,
+                                                                                                                                                                                           max_tuning_iters = self.max_tuning_iters,
+                                                                                                                                                                                           max_rank=self.max_rank,
+                                                                                                                                                                                           n_oversamples = self.n_oversamples,
+                                                                                                                                                                                           n_power_iterations=self.n_power_iterations,
+                                                                                                                                                                                           init_fill_method=self.fill_method,
+                                                                                                                                                                                           min_value=self.min_value,
+                                                                                                                                                                                           max_value=self.max_value,
+                                                                                                                                                                                           change_mode = self.change_mode,
+                                                                                                                                                                                           normalizer=self.normalizer,
+                                                                                                                                                                                           u_group = self.u_group,
+                                                                                                                                                                                           i_group = self.i_group,
+                                                                                                                                                                                           scale_ratio = self.best_ratio,
+                                                                                                                                                                                           pred_tr = self.pred_tr,
+                                                                                                                                                                                           tr_y = self.tr_y,
+                                                                                                                                                                                           pred_val=self.pred_val,
+                                                                                                                                                                                           val_y=self.val_y,
+                                                                                                                                                                                           tr_Xi=self.tr_Xi,
+                                                                                                                                                                                           val_Xi=self.val_Xi).fit_transform(matrix,matrix_val)
         self.filled_matrix = X_filled_softimpute
         current_rank = self.u.shape[1]
         self.cur_rank = current_rank        
 
-        
+
 
     def predict(self,Xi):
 
@@ -145,7 +167,7 @@ class LatentVariable:
         pred2 = np.ravel(np.array(pred2))
         final_pred = pred2
         return final_pred
-    
+
     def dispersion(self, avg, radius):
         sep = []
         for i in range(avg.shape[0]):
@@ -157,18 +179,18 @@ class LatentVariable:
             sepa = np.array(distance) - np.array(rad_sum)
             sep.append(avg.shape[0] - sepa[sepa>0].shape[0])
         sep = np.array(sep).mean()
-        
+
         return sep
-    
+
     def evaluate(self, var, mae, alpha):
         model = MinMaxScaler()
         var = model.fit_transform(var.reshape(-1,1))
         mae = model.fit_transform(mae.reshape(-1,1))
         badness = alpha * mae + (1-alpha) * var
-        
+
         return badness
-        
-    
+
+
     def auto_tuning(self,times,matrix,matrix_val):
         start = 0
         end = 1
@@ -177,21 +199,28 @@ class LatentVariable:
             val_var = []
             candidate = np.linspace(start,end,times)
             for i in candidate:
-                X_filled_softimpute, self.u, self.v, self.s, self.mf_mae, self.mf_valmae, self.match_u, self.match_i, self.ini_u, self.var_u, self.var_i, self.radius_u, self.radius_i = SoftImpute(shrinkage_value=self.shrinkage_value,
-                                         convergence_threshold=self.convergence_threshold,
-                                         max_iters=self.max_iters,
-                                         max_tuning_iters = self.max_tuning_iters,
-                                         max_rank=self.max_rank,
-                                         n_oversamples = self.n_oversamples,
-                                         n_power_iterations=self.n_power_iterations,
-                                         init_fill_method=self.fill_method,
-                                         min_value=self.min_value,
-                                         max_value=self.max_value,
-                                         change_mode = self.change_mode,
-                                         normalizer=self.normalizer,
-                                         u_group = self.u_group,
-                                         i_group = self.i_group,
-                                         scale_ratio = i).fit_transform(matrix,matrix_val)
+                X_filled_softimpute, self.u, self.v, self.s, self.mf_mae, self.mf_valmae, self.match_u, self.match_i, self.ini_u, self.var_u, self.var_i, self.radius_u, self.radius_i = SoftImpute(task_type = self.task_type,
+                                                                                                                                                                                                    shrinkage_value=self.shrinkage_value,
+                                                                                                                                                                                                    convergence_threshold=self.convergence_threshold,
+                                                                                                                                                                                                    max_iters=self.max_iters,
+                                                                                                                                                                                                    max_tuning_iters = self.max_tuning_iters,
+                                                                                                                                                                                                    max_rank=self.max_rank,
+                                                                                                                                                                                                    n_oversamples = self.n_oversamples,
+                                                                                                                                                                                                    n_power_iterations=self.n_power_iterations,
+                                                                                                                                                                                                    init_fill_method=self.fill_method,
+                                                                                                                                                                                                    min_value=self.min_value,
+                                                                                                                                                                                                    max_value=self.max_value,
+                                                                                                                                                                                                    change_mode = self.change_mode,
+                                                                                                                                                                                                    normalizer=self.normalizer,
+                                                                                                                                                                                                    u_group = self.u_group,
+                                                                                                                                                                                                    i_group = self.i_group,
+                                                                                                                                                                                                    scale_ratio = i,
+                                                                                                                                                                                                    pred_tr = self.pred_tr,
+                                                                                                                                                                                                    tr_y = self.tr_y,
+                                                                                                                                                                                                    pred_val=self.pred_val,
+                                                                                                                                                                                                    val_y=self.val_y,
+                                                                                                                                                                                                    tr_Xi=self.tr_Xi,
+                                                                                                                                                                                                    val_Xi=self.val_Xi).fit_transform(matrix,matrix_val)
                 val_mae.append(self.mf_valmae[-1])
                 mean_var = 0
                 for i in range(len(self.var_u)):
@@ -206,10 +235,10 @@ class LatentVariable:
             start = candidate[np.argmin(badness)-1 if np.argmin(badness)!=0 else np.argmin(badness)]
             end = candidate[np.argmin(badness)+1 if np.argmin(badness)!=times-1 else np.argmin(badness)]
             self.best_ratio = candidate[np.argmin(badness)]
-            
-            
-    
-        
-        
-    
+
+
+
+
+
+
 

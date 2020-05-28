@@ -9,8 +9,6 @@ from matplotlib import gridspec
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-from sklearn.model_selection import train_test_split 
-
 from interpret.glassbox.ebm.utils import EBMUtils
 from interpret.utils import autogen_schema
 from interpret.glassbox.ebm.internal import NativeEBM
