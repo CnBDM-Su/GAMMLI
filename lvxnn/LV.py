@@ -130,8 +130,11 @@ class LatentVariable:
         print('missing value counts:',np.isnan(matrix).sum())
         if self.auto_tune:
             self.auto_tuning(5,matrix,matrix_val)
-        self.best_ratio = self.scale_ratio
+        else:
+            self.best_ratio = self.scale_ratio
         X_filled_softimpute, self.u, self.v, self.s, self.mf_mae, self.mf_valmae, self.match_u, self.match_i, self.ini_u,self.var_u, self.var_i, self.radius_u, self.radius_i = SoftImpute(task_type = self.task_type,
+                                                                                                                                                                                           auto_tune = False,
+                                                                                                                                                                                           verbose = self.verbose,
                                                                                                                                                                                            shrinkage_value=self.shrinkage_value,
                                                                                                                                                                                            convergence_threshold=self.convergence_threshold,
                                                                                                                                                                                            max_iters=self.max_iters,
@@ -192,6 +195,7 @@ class LatentVariable:
 
 
     def auto_tuning(self,times,matrix,matrix_val):
+        print('#####start auto_tuning#####')
         start = 0
         end = 1
         for i in range(times-1):
@@ -200,6 +204,8 @@ class LatentVariable:
             candidate = np.linspace(start,end,times)
             for i in candidate:
                 X_filled_softimpute, self.u, self.v, self.s, self.mf_mae, self.mf_valmae, self.match_u, self.match_i, self.ini_u, self.var_u, self.var_i, self.radius_u, self.radius_i = SoftImpute(task_type = self.task_type,
+                                                                                                                                                                                                    auto_tune = True,
+                                                                                                                                                                                                    verbose = self.verbose,
                                                                                                                                                                                                     shrinkage_value=self.shrinkage_value,
                                                                                                                                                                                                     convergence_threshold=self.convergence_threshold,
                                                                                                                                                                                                     max_iters=self.max_iters,

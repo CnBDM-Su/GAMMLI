@@ -53,7 +53,8 @@ class LV_XNN:
                  i_group_num=0,
                  scale_ratio=1,
                  alpha=0.5,
-                 auto_tune=False):
+                 auto_tune=False,
+                 epsilon = 0.5):
 
         super(LV_XNN, self).__init__()
 
@@ -99,6 +100,7 @@ class LV_XNN:
         self.scale_ratio = scale_ratio
         self.alpha = alpha
         self.auto_tune = auto_tune
+        self.epsilon = epsilon
 
 
         tf.random.set_seed(1)
@@ -190,16 +192,16 @@ class LV_XNN:
         residual_val = (val_y.ravel() - pred_val.ravel()).reshape(-1,1)
         
         if self.task_type == 'Classification':
-            residual[residual<0]=0
-            residual[residual>1]=1
-            residual_val[residual_val<0]=0
-            residual_val[residual_val>1]=1
+            residual[abs(residual)<self.epsilon]=0
+            residual_val[abs(residual_val)<self.epsilon]=0
+            self.residual = residual
+
 
 
         #mf fit
         if self.mf_max_iters !=0:
 
-            self.lv_model = LatentVariable(task_type=self.task_type,max_rank=self.max_rank,max_iters=self.mf_max_iters,alpha=self.alpha,
+            self.lv_model = LatentVariable(verbose = self.verbose,task_type=self.task_type,max_rank=self.max_rank,max_iters=self.mf_max_iters,alpha=self.alpha,
                                            max_tuning_iters=self.max_tuning_iters,change_mode=self.change_mode,auto_tune=self.auto_tune,
                                            convergence_threshold=self.convergence_threshold,n_oversamples=self.n_oversamples
                                            ,u_group = self.u_group,i_group = self.i_group,scale_ratio=self.scale_ratio,pred_tr=pred_train,
@@ -222,7 +224,7 @@ class LV_XNN:
             val_error_bi = [val_error1[-1],val_error2[-1]]
             val_error = val_error + val_error_bi
 
-
+        '''
         #selection stage
         if self.mf_max_iters !=0:
             best_choice = val_error.index(min(val_error))
@@ -237,7 +239,9 @@ class LV_XNN:
             self.final_gam_model = self.gami_model
             self.final_mf_model = self.lv_model
             print('select best model: stop at lv model')
-
+        '''
+        self.final_gam_model = self.gami_model
+        self.final_mf_model = self.lv_model
 
         self.cur_rank = self.final_mf_model.cur_rank
         self.match_i = self.final_mf_model.match_i
@@ -254,11 +258,15 @@ class LV_XNN:
 
             return pred
 
-        else:           
+        else:
             pred1 = self.final_gam_model.predict(xx)
             pred2 = self.final_mf_model.predict(Xi)
 
             pred = pred1.ravel()+ pred2.ravel()
+            
+            if self.task_type == 'Classification':
+                pred[pred>1]=1
+                pred[pred<0]=0
 
 
             return pred
@@ -357,16 +365,19 @@ class LV_XNN:
     def cold_start_analysis(self,x,u_i,confi):
         if u_i == 'user':
             group = self.u_group_model.predict(x)
-            mean_g = self.match_u[group]
-            var_g = self.var_u[group]**0.5
+            mean_g = self.match_u[group[0]]
+            var_g = self.var_u[group[0]]**0.5
 
         if u_i == 'item':
             group = self.i_group_model.predict(x)
-            mean_g = self.match_i[group]
-            var_g = self.var_i[group]**0.5
+            mean_g = self.match_i[group[0]]
+            var_g = self.var_i[group[0]]**0.5
 
         upper = mean_g + confi * var_g
         lower = mean_g - confi * var_g
+        
+        print('The new '+u_i+' belong to group '+str(group)+'\n mean is '+str(mean_g)+' and std is '+ str(var_g)+
+        '\n the confidence interval is ['+str(lower)+','+str(upper)+']')
 
         return mean_g, var_g, upper, lower
 

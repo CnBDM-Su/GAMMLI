@@ -28,6 +28,7 @@ class SoftImpute(object):
     def __init__(
             self,
             task_type = None,
+            auto_tune = False,
             shrinkage_value=None,
             convergence_threshold=0.001,
             max_iters=100,
@@ -91,6 +92,7 @@ class SoftImpute(object):
         """
 
         self.task_type = task_type
+        self.auto_tune = auto_tune
         self.normalizer = normalizer
         self.change_mode = change_mode
         self.shrinkage_value = shrinkage_value
@@ -228,8 +230,9 @@ class SoftImpute(object):
         loss = self.loss_record[-1]
         val_loss = self.valloss_record[-1]
         sign = self.sign
-         
-        print(
+        
+        if self.auto_tune == False:
+            print(
             "[SoftImpute] Iter %d: observed %s=%0.6f validation %s=%0.6f,rank=%d" % (
             i + 1,
             sign,
@@ -258,7 +261,8 @@ class SoftImpute(object):
         val_mask = ~missing_val
         max_singular_value = self._max_singular_value(X_filled)
         if self.verbose:
-            print("[SoftImpute] Max Singular Value of X_init = %f" % (
+            if self.auto_tune == False:
+                print("[SoftImpute] Max Singular Value of X_init = %f" % (
                 max_singular_value))
 
         if self.shrinkage_value:
@@ -268,7 +272,8 @@ class SoftImpute(object):
             # with at least 1/50th the max singular value
             shrinkage_value = max_singular_value / 50.0
 
-        print('#####mf_training#####')
+        if self.auto_tune == False:
+            print('#####mf_training#####')
         for i in range(self.max_iters):
             X_reconstruction, rank, U_thresh, V_thresh, S_thresh = self._svd_step(
                 X_filled,
@@ -293,7 +298,8 @@ class SoftImpute(object):
         #X_filled[missing_mask]=0
 
         self.ini_u = X_filled
-        print('######start tuning######')
+        if self.auto_tune == False:
+            print('######start tuning######')
 
         for i in range(self.max_tuning_iters):
             X_reconstruction, rank, U_thresh, V_thresh, S_thresh = self._svd_step(
@@ -320,7 +326,8 @@ class SoftImpute(object):
 
 
         if self.verbose:
-            print("[SoftImpute] Stopped after iteration %d for lambda=%f" % (
+            if self.auto_tune == False:
+                print("[SoftImpute] Stopped after iteration %d for lambda=%f" % (
                 i + 1,
                 shrinkage_value))
 
@@ -519,7 +526,8 @@ class SoftImpute(object):
                     type(X_result)))
 
         X_result = self.project_result(X=X_result)
-        print('change mode state :',self.change_mode)
+        if self.auto_tune == False:
+            print('change mode state :',self.change_mode)
         if self.change_mode==False:
             X_result[observed_mask] = X_original[observed_mask]
         return X_result, U, V, S , loss_record , valloss_record , match_u , match_i, ini_u, var_u, var_i, radius_u, radius_i
