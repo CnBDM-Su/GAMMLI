@@ -15,6 +15,9 @@ import numpy as np
 from sklearn.utils.extmath import randomized_svd
 from sklearn.utils import check_array
 import tensorflow as tf
+from sklearn.metrics.pairwise import cosine_similarity
+from collections import defaultdict
+
 
 F32PREC = np.finfo(np.float32).eps
 
@@ -28,10 +31,11 @@ class SoftImpute(object):
     def __init__(
             self,
             task_type = None,
+            combine = False,
             auto_tune = False,
             shrinkage_value=None,
             convergence_threshold=0.001,
-            max_iters=100,
+            max_iters=1,
             max_tuning_iters=20,
             max_rank=None,
             n_power_iterations=1,
@@ -50,7 +54,8 @@ class SoftImpute(object):
             pred_val=None,
             val_y=None,
             tr_Xi=None,
-            val_Xi=None):
+            val_Xi=None,
+            combine_range=0.99):
         """
         Parameters
         ----------
@@ -92,6 +97,7 @@ class SoftImpute(object):
         """
 
         self.task_type = task_type
+        self.combine = combine
         self.auto_tune = auto_tune
         self.normalizer = normalizer
         self.change_mode = change_mode
@@ -116,6 +122,9 @@ class SoftImpute(object):
         self.val_y=val_y
         self.tr_Xi = tr_Xi
         self.val_Xi = val_Xi
+        self.combine_range = combine_range
+        self.change_u=[]
+        self.change_i=[]
     
         
     def masked_mae(self,X_true, X_pred, mask):
@@ -139,6 +148,11 @@ class SoftImpute(object):
         if old_norm == 0 or (old_norm < F32PREC and np.sqrt(ssd) > F32PREC):
             return False
         else:
+            if len(self.valloss_record)>4:
+                if self.valloss_record[-1] > self.valloss_record[-2]:
+                    if self.valloss_record[-2] > self.valloss_record[-3]:
+                        if self.valloss_record[-3] > self.valloss_record[-4]:
+                            return True
             return (np.sqrt(ssd) / old_norm) < self.convergence_threshold
 
     def _svd_step(self, X, shrinkage_value,tuning=False, max_rank=None):
@@ -165,6 +179,7 @@ class SoftImpute(object):
 
         if tuning:
             U,V ,self.match_u, self.match_i,self.var_u, self.var_i, self.radius_u, self.radius_i = self.cluster_mean(U,V,self.u_group,self.i_group,self.u_max_d,self.i_max_d,self.scale_ratio)
+            self.u_max_d,self.i_max_d = self.update_max_dis(U,V,self.u_group,self.i_group,self.u_max_d,self.i_max_d)
         else:
             self.u_max_d,self.i_max_d = self.get_max_dis(U,V,self.u_group,self.i_group)
         s_thresh = np.maximum(s - shrinkage_value, 0)
@@ -248,7 +263,8 @@ class SoftImpute(object):
         elif self.task_type == 'Classification': 
             self.loss_fn = tf.keras.losses.BinaryCrossentropy()
             self.sign = "BCE"
-        
+        self.group_pre_u = {}
+        self.group_pre_i = {}
         X = check_array(X, force_all_finite=False)
         X_val = check_array(X_val, force_all_finite=False)
 
@@ -283,8 +299,8 @@ class SoftImpute(object):
             X_reconstruction = self.clip(X_reconstruction)
 
             # print error on observed data
-            if self.verbose:
-                self._verbose(X_reconstruction, i, rank)
+            #if self.verbose:
+             #   self._verbose(X_reconstruction, i, rank)
                     
             converged = self._converged(
                 X_old=X_filled,
@@ -298,8 +314,6 @@ class SoftImpute(object):
         #X_filled[missing_mask]=0
 
         self.ini_u = X_filled
-        if self.auto_tune == False:
-            print('######start tuning######')
 
         for i in range(self.max_tuning_iters):
             X_reconstruction, rank, U_thresh, V_thresh, S_thresh = self._svd_step(
@@ -334,7 +348,12 @@ class SoftImpute(object):
 
         if self.change_mode:
             X_filled = X_reconstruction
-        return X_filled, U_thresh, V_thresh, S_thresh ,self.loss_record, self.valloss_record, self.match_u, self.match_i, self.ini_u, self.var_u, self.var_i, self.radius_u, self.radius_i
+            
+        var_whole_u = np.var(U_thresh)
+        var_whole_i = np.var(V_thresh.T)
+        print('final num of user group:',len(self.match_u))
+        print('final num of item group:',len(self.match_i))
+        return X_filled, U_thresh, V_thresh, S_thresh ,self.loss_record, self.valloss_record, self.match_u, self.match_i, self.var_u, self.var_i, var_whole_u, var_whole_i, self.group_pre_u, self.group_pre_i
 
     def cluster_mean(self, u,v,u_group,i_group,u_max_d,i_max_d,scale_ratio):
 
@@ -378,9 +397,72 @@ class SoftImpute(object):
 
 
             return new
+        '''
+        def center_exclude(point_t,exclude):
+
+            new = point_t
+            
+            for i in range(point_t.shape[0]):
+                new = (2-scale_ratio) * point_t + (scale_ratio-1) * exclude
+                
+            new = new.reshape(-1,1,point_t.shape[1])
+                
+            return new
+            
+        '''
+        def center_dis(x):
+            dis = {}
+            closest = {}
+            adjusted = np.mean(np.array(list(x.values())),axis=0)
+            for i in x.keys():
+                x[i] = x[i] - adjusted
+            for i in x.keys():                
+                sim = []
+                for j in x.keys():
+                    sim.append(cosine_similarity(x[i].reshape(1,-1),x[j].reshape(1,-1))[0][0])
+                sim = np.array(sim)
+                similarity = np.concatenate([np.array([np.array(list(x.keys()))]).T,abs(sim).reshape(-1,1)],axis=1).T
+                sorted_sim = similarity.T[np.lexsort(similarity)][:-1,:]
+                dis[i] = sorted_sim
+                closest[i] = similarity.T[np.lexsort(similarity)][-2,0]
+                
+                
+            return dis, closest
+        
+        def center_combine(u_group, dis, closest, group_pre):
+
+            combined = []
+            changed = []
+            for i in closest.keys():           
+                if dis[i][dis[i][:,0]==closest[i]][:,-1] > self.combine_range:
+                    if closest[i] not in combined:
+                        u_group[u_group==i] = closest[i]
+                        group_pre[i] = int(closest[i])
+                        combined.append(i)
+                        changed.append(int(closest[i]))
+                    #combine[i].append(closest[i])
+            return u_group, group_pre, changed
+
 
         if type(u_group) != int :
-            for i in np.unique(u_group):
+            if len(np.unique(u_group)) > 1:
+                for i in np.unique(u_group):
+                    cus = np.argwhere(u_group==i)
+                    group = u[cus,:].reshape(-1,u.shape[1])
+                    avg = np.mean(group,axis=0)
+                    var = np.var(group,axis=0)
+                    point_t = u[cus].reshape(-1,u.shape[1])
+                    #u[cus] = center_move(point_t,u_max_d[i],avg)
+                    u[cus] = center_restrict(point_t,u_max_d[i],avg)
+                    #u[cus] = avg
+                    match_u[i] = avg
+                    var_u[i] = var
+                    radius_u[i] =u_max_d[i]*scale_ratio
+                if self.combine:
+                    dis , closest = center_dis(match_u)
+                    u_group, self.group_pre_u, self.change_u = center_combine(u_group, dis, closest, self.group_pre_u)
+            else:
+                i = np.unique(u_group)[0]
                 cus = np.argwhere(u_group==i)
                 group = u[cus,:].reshape(-1,u.shape[1])
                 avg = np.mean(group,axis=0)
@@ -392,10 +474,29 @@ class SoftImpute(object):
                 match_u[i] = avg
                 var_u[i] = var
                 radius_u[i] =u_max_d[i]*scale_ratio
-
+                self.change_u = []
+            
 
         if type(i_group) != int :
-            for j in np.unique(i_group):
+            if len(np.unique(i_group)) > 1:
+                for j in np.unique(i_group):
+                    cus = np.argwhere(i_group==j)
+                    group = v[cus,:].reshape(-1,v.shape[1])
+                    avg = np.mean(group,axis=0)
+                    var = np.var(group,axis=0)
+                    point_t = v[cus].reshape(-1,v.shape[1])
+                    #v[cus] = center_move(point_t,i_max_d[j],avg)
+                    v[cus] = center_restrict(point_t,i_max_d[j],avg)
+                    #v[cus] = avg
+                    match_i[j] = avg
+                    var_i[j] = var
+                    radius_i[j] =i_max_d[j]*scale_ratio
+                if self.combine:
+                    dis , closest = center_dis(match_i)
+                    i_group, self.group_pre_i, self.change_i = center_combine(i_group, dis, closest, self.group_pre_i)
+        
+            else:
+                j = np.unique(i_group)[0]
                 cus = np.argwhere(i_group==j)
                 group = v[cus,:].reshape(-1,v.shape[1])
                 avg = np.mean(group,axis=0)
@@ -406,11 +507,53 @@ class SoftImpute(object):
                 #v[cus] = avg
                 match_i[j] = avg
                 var_i[j] = var
-                radius_i[i] =i_max_d[j]*scale_ratio
+                radius_i[j] =i_max_d[j]*scale_ratio
+                self.change_i = []
+        '''
+        exclude = {}
+        for i in range(len(match_u)):
+            exclude[i] = (sum(list(match_u.values()))-match_u[i])/(len(match_u)-1)
+        for i in np.unique(u_group):
+            d = np.sqrt(np.sum(np.square(match_u[i]-exclude[i])))
+            if scale_ratio * radius_u[i] < d:
+                continue
+            cus = np.argwhere(u_group==i)
+            group = u[cus,:].reshape(-1,u.shape[1])
+            avg = np.mean(group,axis=0)
+            var = np.var(group,axis=0)
+            point_t = u[cus].reshape(-1,u.shape[1])
+            #u[cus] = center_move(point_t,u_max_d[i],avg)
+            u[cus] = center_exclude(point_t,exclude[i])
+            #u[cus] = avg
+            match_u[i] = avg
+            var_u[i] = var
+            
+            
+        exclude = {}
+        for i in range(len(match_i)):
+            exclude[i] = (sum(list(match_i.values()))-match_i[i])/(len(match_i)-1)
+        for i in np.unique(i_group):
+
+            d = np.sqrt(np.sum(np.square(match_i[i]-exclude[i])))
+            print(scale_ratio *radius_i[i],d)
+            if scale_ratio * radius_i[i] < d:
+                continue
+            cus = np.argwhere(i_group==i)
+            group = v[cus,:].reshape(-1,v.shape[1])
+            avg = np.mean(group,axis=0)
+            var = np.var(group,axis=0)
+            point_t = v[cus].reshape(-1,v.shape[1])
+            #u[cus] = center_move(point_t,u_max_d[i],avg)
+            v[cus] = center_exclude(point_t,exclude[i])
+            #u[cus] = avg
+            match_i[i] = avg
+            var_i[i] = var
+        '''    
         v=v.T
 
 
         return u,v,match_u,match_i,var_u,var_i, radius_u, radius_i
+    
 
     def get_max_dis(self, u,v,u_group,i_group):
         v=v.T
@@ -420,30 +563,62 @@ class SoftImpute(object):
             for i in range(point_t.shape[0]):
                 d.append(np.sqrt(np.sum(np.square(point_t[i]-avg))))    
             d=np.array(d).reshape(-1,1)
-            return d.max()
+            return np.percentile(d,95,interpolation='lower')
 
-        u_max_d = []
+        u_max_d = {}
         if type(u_group) != int :
             for i in np.unique(u_group):
                 cus = np.argwhere(u_group==i)
                 group = u[cus,:].reshape(-1,u.shape[1])
                 avg = np.mean(group,axis=0)           
                 point_t = u[cus].reshape(-1,u.shape[1])
-                u_max_d.append(max_distance(point_t,avg))
+                u_max_d[i]=max_distance(point_t,avg)
 
 
-        i_max_d = []
+        i_max_d = {}
         if type(i_group) != int :            
             for j in np.unique(i_group):
                 cus = np.argwhere(i_group==j)
                 group = v[cus,:].reshape(-1,v.shape[1])
                 avg = np.mean(group,axis=0)
                 point_t = v[cus].reshape(-1,v.shape[1])
-                i_max_d.append(max_distance(point_t,avg))
+                i_max_d[j]=max_distance(point_t,avg)
                 #v[cus] = avg
 
 
         return u_max_d,i_max_d
+    
+    def update_max_dis(self, u,v,u_group,i_group,u_max_d,i_max_d):
+        v=v.T
+        
+
+        
+        def max_distance(point_t,avg):
+            if np.isnan(avg[0]):
+                return 0
+            d=[]
+            for i in range(point_t.shape[0]):
+                d.append(np.sqrt(np.sum(np.square(point_t[i]-avg))))    
+            d=np.array(d).reshape(-1,1)
+            return np.percentile(d,95,interpolation='lower')
+        
+        if len(self.change_u)!=0:
+            for i in self.change_u:
+                cus = np.argwhere(u_group==i)
+                group = u[cus,:].reshape(-1,u.shape[1])
+                avg = np.mean(group,axis=0) 
+                point_t = u[cus].reshape(-1,u.shape[1])
+                u_max_d[i]=max_distance(point_t,avg)
+            
+        if len(self.change_i)!=0:
+            for j in self.change_i:
+                cus = np.argwhere(i_group==j)
+                group = v[cus,:].reshape(-1,v.shape[1])
+                avg = np.mean(group,axis=0)
+                point_t = v[cus].reshape(-1,v.shape[1])
+                i_max_d[j]=max_distance(point_t,avg)
+        
+        return u_max_d, i_max_d
 
     def prepare_input_data(self, X):
         """
@@ -518,7 +693,7 @@ class SoftImpute(object):
                     self.__class__.__name__,
                     type(X_filled)))
 
-        X_result,U,V,S,loss_record,valloss_record,match_u,match_i, ini_u, var_u, var_i, radius_u, radius_i= self.solve(X_filled, X_val, missing_mask,missing_val)
+        X_result,U,V,S,loss_record,valloss_record,match_u,match_i, var_u, var_i, var_w_u, var_w_i, pre_u, pre_i= self.solve(X_filled, X_val, missing_mask,missing_val)
         if not isinstance(X_result, np.ndarray):
             raise TypeError(
                 "Expected %s.solve() to return NumPy array but got %s" % (
@@ -530,7 +705,7 @@ class SoftImpute(object):
             print('change mode state :',self.change_mode)
         if self.change_mode==False:
             X_result[observed_mask] = X_original[observed_mask]
-        return X_result, U, V, S , loss_record , valloss_record , match_u , match_i, ini_u, var_u, var_i, radius_u, radius_i
+        return X_result, U, V, S , loss_record , valloss_record , match_u , match_i, var_u, var_i, var_w_u, var_w_i ,pre_u, pre_i
 
     def _check_input(self, X):
         if len(X.shape) != 2:

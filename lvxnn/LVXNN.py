@@ -38,7 +38,7 @@ class LV_XNN:
                  early_stop_thres=100,
                  shrinkage_value=None,
                  convergence_threshold=0.001,
-                 mf_training_iters=100,
+                 mf_training_iters=1,
                  mf_tuning_iters=50,
                  max_rank=None,
                  n_power_iterations=1,
@@ -54,7 +54,9 @@ class LV_XNN:
                  scale_ratio=1,
                  alpha=0.5,
                  auto_tune=False,
-                 epsilon = 0.5):
+                 epsilon = 0.5,
+                 random_state = 0,
+                 combine_range=0.99):
 
         super(LV_XNN, self).__init__()
 
@@ -101,9 +103,11 @@ class LV_XNN:
         self.alpha = alpha
         self.auto_tune = auto_tune
         self.epsilon = epsilon
+        self.random_state = random_state
+        self.combine_range = combine_range
 
 
-        tf.random.set_seed(1)
+        tf.random.set_seed(self.random_state)
         simu_dir = "./results/gaminet/"
         #path = 'data/simulation/sim_0.9.csv'
         if not os.path.exists(simu_dir):
@@ -123,17 +127,17 @@ class LV_XNN:
     def fit(self,xx,Xi,y):
 
         #initial cluster training
-        user_feature_list = []
-        item_feature_list = []
+        self.user_feature_list = []
+        self.item_feature_list = []
         for indice, (feature_name, feature_info) in enumerate(self.meta_info.items()):
             if feature_info["source"] == "user":
-                user_feature_list.append(indice)
+                self.user_feature_list.append(indice)
             elif feature_info["source"] == "item":
-                item_feature_list.append(indice)
+                self.item_feature_list.append(indice)
 
 
-        user_feature = np.concatenate([xx[:,user_feature_list],Xi[:,0].reshape(-1,1)],1)
-        item_feature = np.concatenate([xx[:,item_feature_list],Xi[:,1].reshape(-1,1)],1)
+        user_feature = np.concatenate([xx[:,self.user_feature_list],Xi[:,0].reshape(-1,1)],1)
+        item_feature = np.concatenate([xx[:,self.item_feature_list],Xi[:,1].reshape(-1,1)],1)
         user_feature = np.unique(user_feature,axis=0)
         item_feature = np.unique(item_feature,axis=0)
         user_feature = user_feature[np.argsort(user_feature[:,-1])]
@@ -164,7 +168,7 @@ class LV_XNN:
                                   interact_grid_size=self.interact_grid_size,activation_func=tf.tanh, batch_size=self.batch_size, lr_bp=self.lr_bp,
                                   main_effect_epochs=self.main_effect_epochs,tuning_epochs=self.tuning_epochs, multi_type_num = self.multi_type_num,
                                   loss_threshold_main=self.loss_threshold_main,loss_threshold_inter=self.loss_threshold_inter,interaction_epochs=self.interaction_epochs,
-                                  verbose=self.verbose, val_ratio=self.val_ratio, early_stop_thres=self.early_stop_thres)
+                                  verbose=self.verbose, val_ratio=self.val_ratio, early_stop_thres=self.early_stop_thres,random_state=self.random_state)
 
 
         model = self.gami_model
@@ -205,7 +209,7 @@ class LV_XNN:
                                            max_tuning_iters=self.max_tuning_iters,change_mode=self.change_mode,auto_tune=self.auto_tune,
                                            convergence_threshold=self.convergence_threshold,n_oversamples=self.n_oversamples
                                            ,u_group = self.u_group,i_group = self.i_group,scale_ratio=self.scale_ratio,pred_tr=pred_train,
-                                           tr_y=tr_y,pred_val=pred_val,val_y=val_y, tr_Xi=tr_Xi,val_Xi=val_Xi)
+                                           tr_y=tr_y,pred_val=pred_val,val_y=val_y, tr_Xi=tr_Xi,val_Xi=val_Xi,random_state=self.random_state,combine_range=self.combine_range)
             model1 = self.lv_model
             st_time = time.time()
             model1.fit(tr_Xi,val_Xi,residual,residual_val,self.ui_shape)
@@ -248,6 +252,10 @@ class LV_XNN:
         self.match_u = self.final_mf_model.match_u
         self.var_u = self.final_mf_model.var_u
         self.var_i = self.final_mf_model.var_i
+        
+        self.s = np.diag(self.final_mf_model.s)
+        self.u = self.final_mf_model.u
+        self.v = self.final_mf_model.v.T
 
 
     def predict(self,xx,Xi):
@@ -259,12 +267,48 @@ class LV_XNN:
             return pred
 
         else:
+            
             pred1 = self.final_gam_model.predict(xx)
-            pred2 = self.final_mf_model.predict(Xi)
+            
+            pred2 = []
+            for i in range(Xi.shape[0]):
+                if Xi[i,0] == 'cold':
+                    g = self.u_group_model.predict(xx[i,self.user_feature_list].reshape(1,-1))[0]
+                    group_pre_u = self.final_mf_model.pre_u
+                    for i in range(1000):
+                        if g in list(group_pre_u.keys()):
+                            g = group_pre_u[g]
+                        else:
+                            break
+                    u = self.match_u[g]
+                    #u=np.zeros(u.shape)
+                else:
+                    u = self.u[int(Xi[i,0])]
+                if Xi[i,1] == 'cold':
+                    g = self.i_group_model.predict(xx[i,self.item_feature_list].reshape(1,-1))[0]
+                    group_pre_i = self.final_mf_model.pre_i
+                    for i in range(1000):
+                        if g in list(group_pre_i.keys()):
+                            g = group_pre_i[g]
+                        else:
+                            break
+                    v = self.match_i[g]
+                    #v =np.zeros(v.shape)
+                else:
+                    v =self.v[int(Xi[i,1])]
+
+                pred_mf = np.dot(u, np.multiply(self.s, v))
+                pred2.append(pred_mf)
+            pred2 = np.array(pred2)
 
             pred = pred1.ravel()+ pred2.ravel()
             
+
+            
             if self.task_type == 'Classification':
+                #print(pred.shape)
+                #pred = tf.nn.softmax(pred).numpy()
+                #print(pred.shape)
                 pred[pred>1]=1
                 pred[pred<0]=0
 
@@ -310,13 +354,16 @@ class LV_XNN:
     def get_distance(self,x):
         dis = {}
         closest = {}
-        group = {}
-        for i in range(len(x)):
+        #group = {}
+        adjusted = np.mean(np.array(list(x.values())),axis=0)
+        for i in x.keys():
+            x[i] = x[i] - adjusted
+        for i in x.keys():            
             sim = []
-            for j in range(len(x)):
+            for j in x.keys():
                 sim.append(cosine_similarity(x[i].reshape(1,-1),x[j].reshape(1,-1))[0][0])
             sim = np.array(sim)
-            similarity = np.concatenate([np.array([range(len(x))]).T,abs(sim).reshape(-1,1)],axis=1).T
+            similarity = np.concatenate([np.array([np.array(list(x.keys()))]).T,abs(sim).reshape(-1,1)],axis=1).T
             #sorted_sim = similarity.T[np.lexsort(similarity)][1:,:]
             sorted_sim = similarity.T[np.lexsort(similarity)][:-1,:]
             dis[i] = sorted_sim
@@ -332,11 +379,12 @@ class LV_XNN:
             group[i] = dis[i][dis[i][:,1]>threshold]
 
         G = nx.Graph()
-        for i in range(len(dis)):
+        for i in dis.keys():
             G.add_node(i)
-        for i in range(len(dis)):
-            for j in range(len(dis)-1):
-                G.add_edge(i,dis[i][j][0],weight=np.round(dis[i][j][1],3))
+        for i in dis.keys():
+            for j in dis.keys():
+                if i != j:
+                    G.add_edge(i,dis[i][dis[i][:,0]==j][0][0],weight=np.round(dis[i][dis[i][:,0]==j][0][1],3))
 
         pos = nx.spring_layout(G,iterations=1000)
         n_labels = {} 
