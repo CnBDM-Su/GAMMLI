@@ -17,8 +17,7 @@ class LatentVariable:
                  mf_type='als',
                  shrinkage_value=None,
                  convergence_threshold=0.001,
-                 max_iters=1,
-                 max_tuning_iters=50,
+                 max_iters=20,
                  max_rank=None,
                  n_power_iterations=1,
                  n_oversamples=10,
@@ -42,7 +41,8 @@ class LatentVariable:
                  tr_Xi=None,
                  val_Xi=None,
                  random_state =0,
-                 combine_range=0.99):
+                 combine_range=0.99,
+                 wc = None):
         """
         mf_type: string
             type two algorithms are implements, type="svd" or the default type="als". The
@@ -101,7 +101,6 @@ class LatentVariable:
         self.u_group = u_group
         self.i_group = i_group
         self.scale_ratio = scale_ratio
-        self.max_tuning_iters = max_tuning_iters
 
         self.alpha = alpha
         self.beta = beta
@@ -115,28 +114,23 @@ class LatentVariable:
         self.val_Xi = val_Xi
         self.random_state = random_state
         self.combine_range= combine_range
+        self.wc = wc
 
 
     def fit(self,Xi,val_Xi,residual,residual_val,ui_shape):
 
         train_index = Xi
-        val_index= val_Xi
         residual_train = residual
         residual_val = residual_val
         matrix =np.zeros(shape=[ui_shape[0],ui_shape[1]])
         for i in range(train_index.shape[0]):
             matrix[int(train_index[i,0]),int(train_index[i,1])] = residual_train[i]
-        matrix_val =np.zeros(shape=[ui_shape[0],ui_shape[1]])
-        for i in range(val_index.shape[0]):
-            matrix_val[int(val_index[i,0]),int(val_index[i,1])] = residual_val[i]
-        matrix_val[matrix_val==0] = np.nan
         matrix[matrix==0] = np.nan
         #matrix = BiScaler(tolerance=0.1).fit_transform(matrix)
 
-        matrix[matrix==0] = np.nan
         print('missing value counts:',np.isnan(matrix).sum())
         if self.auto_tune:
-            self.auto_tuning(5,matrix,matrix_val)
+            self.auto_tuning(5,matrix)
         else:
             self.best_ratio = self.scale_ratio
         X_filled_softimpute, self.u, self.v, self.s, self.mf_mae, self.mf_valmae, self.match_u, self.match_i, self.var_u, self.var_i, var_whole_u, var_whole_i, self.pre_u, self.pre_i = SoftImpute(task_type = self.task_type,
@@ -146,7 +140,6 @@ class LatentVariable:
                                                                                                                                                                                            shrinkage_value=self.shrinkage_value,
                                                                                                                                                                                            convergence_threshold=self.convergence_threshold,
                                                                                                                                                                                            max_iters=self.max_iters,
-                                                                                                                                                                                           max_tuning_iters = self.max_tuning_iters,
                                                                                                                                                                                            max_rank=self.max_rank,
                                                                                                                                                                                            n_oversamples = self.n_oversamples,
                                                                                                                                                                                            n_power_iterations=self.n_power_iterations,
@@ -164,7 +157,8 @@ class LatentVariable:
                                                                                                                                                                                            val_y=self.val_y,
                                                                                                                                                                                            tr_Xi=self.tr_Xi,
                                                                                                                                                                                            val_Xi=self.val_Xi,
-                                                                                                                                                                                           combine_range = self.combine_range).fit_transform(matrix,matrix_val)
+                                                                                                                                                                                           combine_range = self.combine_range,
+                                                                                                                                                                                           wc = self.wc).fit_transform(matrix)
         self.filled_matrix = X_filled_softimpute
         current_rank = self.u.shape[1]
         self.cur_rank = current_rank        
@@ -205,7 +199,7 @@ class LatentVariable:
         return badness
 
 
-    def auto_tuning(self,times,matrix,matrix_val):
+    def auto_tuning(self,times,matrix):
         
         def once(ratio,dis):
             print(np.unique(self.u_group).shape)
@@ -216,7 +210,6 @@ class LatentVariable:
                                                                                                                                    shrinkage_value=self.shrinkage_value,
                                                                                                                                    convergence_threshold=self.convergence_threshold,
                                                                                                                                    max_iters=self.max_iters,
-                                                                                                                                   max_tuning_iters = self.max_tuning_iters,
                                                                                                                                    max_rank=self.max_rank,
                                                                                                                                    n_oversamples = self.n_oversamples,
                                                                                                                                    n_power_iterations=self.n_power_iterations,
@@ -234,7 +227,8 @@ class LatentVariable:
                                                                                                                                    val_y=self.val_y,
                                                                                                                                    tr_Xi=self.tr_Xi,
                                                                                                                                    val_Xi=self.val_Xi,
-                                                                                                                                   combine_range=dis).fit_transform(matrix,matrix_val)
+                                                                                                                                   combine_range=dis,
+                                                                                                                                   wc = self.wc).fit_transform(matrix)
             val_mae = mf_valmae[-1]
             var_mean = 0
             for i in var_u.keys():
@@ -271,7 +265,7 @@ class LatentVariable:
             val_w_var = []
             candidate_r = np.linspace(start_r,end_r,times)
             candidate_d = np.linspace(start_d,end_d,times)
-            stat = Parallel(n_jobs=-1,timeout=300)(delayed(once)(j,k) for j in candidate_r for k in candidate_d)
+            stat = Parallel(n_jobs=-1,timeout=3000)(delayed(once)(j,k) for j in candidate_r for k in candidate_d)
             stat = pd.concat(stat)
             val_mae = stat.val_mae.values.tolist()
             val_var = stat.val_var.values.tolist()

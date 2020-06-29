@@ -16,7 +16,6 @@ from sklearn.utils.extmath import randomized_svd
 from sklearn.utils import check_array
 import tensorflow as tf
 from sklearn.metrics.pairwise import cosine_similarity
-from collections import defaultdict
 
 
 F32PREC = np.finfo(np.float32).eps
@@ -35,8 +34,7 @@ class SoftImpute(object):
             auto_tune = False,
             shrinkage_value=None,
             convergence_threshold=0.001,
-            max_iters=1,
-            max_tuning_iters=20,
+            max_iters=20,
             max_rank=None,
             n_power_iterations=1,
             init_fill_method="zero",
@@ -55,7 +53,8 @@ class SoftImpute(object):
             val_y=None,
             tr_Xi=None,
             val_Xi=None,
-            combine_range=0.99):
+            combine_range=0.99,
+            wc = None):
         """
         Parameters
         ----------
@@ -110,7 +109,6 @@ class SoftImpute(object):
         self.u_group = u_group
         self.i_group = i_group
         self.scale_ratio = scale_ratio
-        self.max_tuning_iters = max_tuning_iters
         self.n_oversamples = n_oversamples
         self.fill_method = init_fill_method
         self.min_value = min_value
@@ -123,6 +121,7 @@ class SoftImpute(object):
         self.tr_Xi = tr_Xi
         self.val_Xi = val_Xi
         self.combine_range = combine_range
+        self.wc = wc
         self.change_u=[]
         self.change_i=[]
     
@@ -256,7 +255,7 @@ class SoftImpute(object):
             val_loss,
             rank))
     
-    def solve(self, X, X_val, missing_mask, missing_val):
+    def solve(self, X, missing_mask):
         if self.task_type=="Regression":
             self.sign = "MAE"
             self.loss_fn = tf.keras.losses.MeanAbsoluteError()
@@ -266,7 +265,6 @@ class SoftImpute(object):
         self.group_pre_u = {}
         self.group_pre_i = {}
         X = check_array(X, force_all_finite=False)
-        X_val = check_array(X_val, force_all_finite=False)
 
         X_init = X.copy()
         self.loss_record = []
@@ -274,7 +272,6 @@ class SoftImpute(object):
 
         X_filled = X
         observed_mask = ~missing_mask
-        val_mask = ~missing_val
         max_singular_value = self._max_singular_value(X_filled)
         if self.verbose:
             if self.auto_tune == False:
@@ -290,32 +287,25 @@ class SoftImpute(object):
 
         if self.auto_tune == False:
             print('#####mf_training#####')
-        for i in range(self.max_iters):
-            X_reconstruction, rank, U_thresh, V_thresh, S_thresh = self._svd_step(
+
+        X_reconstruction, rank, U_thresh, V_thresh, S_thresh = self._svd_step(
                 X_filled,
                 shrinkage_value,
                 tuning=False,
                 max_rank=self.max_rank)
-            X_reconstruction = self.clip(X_reconstruction)
+        X_reconstruction = self.clip(X_reconstruction)
 
-            # print error on observed data
-            #if self.verbose:
-             #   self._verbose(X_reconstruction, i, rank)
                     
-            converged = self._converged(
+        converged = self._converged(
                 X_old=X_filled,
                 X_new=X_reconstruction,
                 missing_mask=missing_mask)
-            X_filled[missing_mask] = X_reconstruction[missing_mask]
+        X_filled[missing_mask] = X_reconstruction[missing_mask]
 
-
-            if converged:
-                break
-        #X_filled[missing_mask]=0
 
         self.ini_u = X_filled
 
-        for i in range(self.max_tuning_iters):
+        for i in range(self.max_iters):
             X_reconstruction, rank, U_thresh, V_thresh, S_thresh = self._svd_step(
                 X_filled,
                 shrinkage_value,
@@ -365,15 +355,6 @@ class SoftImpute(object):
         radius_u = dict()
         radius_i = dict()
 
-        def center_move(point_t,avg):
-            if point_t.shape[0] ==1:
-                new = point_t
-                return new
-
-            new = (scale_ratio*point_t+(1-scale_ratio)*avg).reshape(-1,1,point_t.shape[1])
-
-            return new
-
 
         def center_restrict(point_t,max_d,avg):
             new = point_t
@@ -397,19 +378,7 @@ class SoftImpute(object):
 
 
             return new
-        '''
-        def center_exclude(point_t,exclude):
 
-            new = point_t
-            
-            for i in range(point_t.shape[0]):
-                new = (2-scale_ratio) * point_t + (scale_ratio-1) * exclude
-                
-            new = new.reshape(-1,1,point_t.shape[1])
-                
-            return new
-            
-        '''
         def center_dis(x):
             dis = {}
             closest = {}
@@ -509,46 +478,7 @@ class SoftImpute(object):
                 var_i[j] = var
                 radius_i[j] =i_max_d[j]*scale_ratio
                 self.change_i = []
-        '''
-        exclude = {}
-        for i in range(len(match_u)):
-            exclude[i] = (sum(list(match_u.values()))-match_u[i])/(len(match_u)-1)
-        for i in np.unique(u_group):
-            d = np.sqrt(np.sum(np.square(match_u[i]-exclude[i])))
-            if scale_ratio * radius_u[i] < d:
-                continue
-            cus = np.argwhere(u_group==i)
-            group = u[cus,:].reshape(-1,u.shape[1])
-            avg = np.mean(group,axis=0)
-            var = np.var(group,axis=0)
-            point_t = u[cus].reshape(-1,u.shape[1])
-            #u[cus] = center_move(point_t,u_max_d[i],avg)
-            u[cus] = center_exclude(point_t,exclude[i])
-            #u[cus] = avg
-            match_u[i] = avg
-            var_u[i] = var
-            
-            
-        exclude = {}
-        for i in range(len(match_i)):
-            exclude[i] = (sum(list(match_i.values()))-match_i[i])/(len(match_i)-1)
-        for i in np.unique(i_group):
-
-            d = np.sqrt(np.sum(np.square(match_i[i]-exclude[i])))
-            print(scale_ratio *radius_i[i],d)
-            if scale_ratio * radius_i[i] < d:
-                continue
-            cus = np.argwhere(i_group==i)
-            group = v[cus,:].reshape(-1,v.shape[1])
-            avg = np.mean(group,axis=0)
-            var = np.var(group,axis=0)
-            point_t = v[cus].reshape(-1,v.shape[1])
-            #u[cus] = center_move(point_t,u_max_d[i],avg)
-            v[cus] = center_exclude(point_t,exclude[i])
-            #u[cus] = avg
-            match_i[i] = avg
-            var_i[i] = var
-        '''    
+ 
         v=v.T
 
 
@@ -671,7 +601,7 @@ class SoftImpute(object):
         else:
             return np.random.randn(n_missing) * std + mean
 
-    def fit_transform(self, X,val_X, y=None):
+    def fit_transform(self, X, y=None):
         """
         Fit the imputer and then transform input `X`
 
@@ -681,7 +611,6 @@ class SoftImpute(object):
         on new `X_test`.
         """
         X_original, missing_mask = self.prepare_input_data(X)
-        X_val , missing_val = self.prepare_input_data(val_X)
         observed_mask = ~missing_mask
         X = X_original.copy()
         if self.normalizer is not None:
@@ -693,7 +622,7 @@ class SoftImpute(object):
                     self.__class__.__name__,
                     type(X_filled)))
 
-        X_result,U,V,S,loss_record,valloss_record,match_u,match_i, var_u, var_i, var_w_u, var_w_i, pre_u, pre_i= self.solve(X_filled, X_val, missing_mask,missing_val)
+        X_result,U,V,S,loss_record,valloss_record,match_u,match_i, var_u, var_i, var_w_u, var_w_i, pre_u, pre_i= self.solve(X_filled, missing_mask)
         if not isinstance(X_result, np.ndarray):
             raise TypeError(
                 "Expected %s.solve() to return NumPy array but got %s" % (

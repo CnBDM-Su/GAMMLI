@@ -7,7 +7,6 @@ Created on Tue Feb 18 16:56:00 2020
 import os
 import time
 import numpy as np
-from sklearn.metrics import mean_absolute_error
 import tensorflow as tf
 from .LV import LatentVariable
 from .gaminet import GAMINet
@@ -38,8 +37,7 @@ class LV_XNN:
                  early_stop_thres=100,
                  shrinkage_value=None,
                  convergence_threshold=0.001,
-                 mf_training_iters=1,
-                 mf_tuning_iters=50,
+                 mf_training_iters=20,
                  max_rank=None,
                  n_power_iterations=1,
                  n_oversamples=10,
@@ -56,7 +54,8 @@ class LV_XNN:
                  auto_tune=False,
                  epsilon = 0.5,
                  random_state = 0,
-                 combine_range=0.99):
+                 combine_range=0.99,
+                 wc = None):
 
         super(LV_XNN, self).__init__()
 
@@ -90,7 +89,6 @@ class LV_XNN:
         self.shrinkage_value = shrinkage_value
         self.convergence_threshold = convergence_threshold
         self.mf_max_iters = mf_training_iters
-        self.max_tuning_iters = mf_tuning_iters
         self.max_rank = max_rank
         self.change_mode =change_mode
         self.n_power_iterations = n_power_iterations
@@ -105,6 +103,7 @@ class LV_XNN:
         self.epsilon = epsilon
         self.random_state = random_state
         self.combine_range = combine_range
+        self.wc = wc
 
 
         tf.random.set_seed(self.random_state)
@@ -124,7 +123,7 @@ class LV_XNN:
             self.loss_fn = tf.keras.losses.BinaryCrossentropy()
 
     #gam first mf second    
-    def fit(self,xx,Xi,y):
+    def fit(self,tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx):
 
         #initial cluster training
         self.user_feature_list = []
@@ -136,8 +135,8 @@ class LV_XNN:
                 self.item_feature_list.append(indice)
 
 
-        user_feature = np.concatenate([xx[:,self.user_feature_list],Xi[:,0].reshape(-1,1)],1)
-        item_feature = np.concatenate([xx[:,self.item_feature_list],Xi[:,1].reshape(-1,1)],1)
+        user_feature = np.concatenate([tr_x[:,self.user_feature_list],tr_Xi[:,0].reshape(-1,1)],1)
+        item_feature = np.concatenate([tr_x[:,self.item_feature_list],tr_Xi[:,1].reshape(-1,1)],1)
         user_feature = np.unique(user_feature,axis=0)
         item_feature = np.unique(item_feature,axis=0)
         user_feature = user_feature[np.argsort(user_feature[:,-1])]
@@ -174,13 +173,7 @@ class LV_XNN:
         model = self.gami_model
         st_time = time.time()
 
-        model.fit(xx, y)
-        val_x = xx[model.val_idx, :]
-        val_y = y[model.val_idx, :]
-        val_Xi = Xi[model.val_idx, :]
-        tr_x = xx[model.tr_idx, :]
-        tr_y = y[model.tr_idx, :]
-        tr_Xi = Xi[model.tr_idx, :]
+        model.fit(tr_x, val_x, tr_y, val_y, tr_idx, val_idx)
 
         fi_time = time.time()
         print('time cost:',fi_time-st_time)
@@ -206,10 +199,11 @@ class LV_XNN:
         if self.mf_max_iters !=0:
 
             self.lv_model = LatentVariable(verbose = self.verbose,task_type=self.task_type,max_rank=self.max_rank,max_iters=self.mf_max_iters,alpha=self.alpha,
-                                           max_tuning_iters=self.max_tuning_iters,change_mode=self.change_mode,auto_tune=self.auto_tune,
+                                           change_mode=self.change_mode,auto_tune=self.auto_tune,
                                            convergence_threshold=self.convergence_threshold,n_oversamples=self.n_oversamples
                                            ,u_group = self.u_group,i_group = self.i_group,scale_ratio=self.scale_ratio,pred_tr=pred_train,
-                                           tr_y=tr_y,pred_val=pred_val,val_y=val_y, tr_Xi=tr_Xi,val_Xi=val_Xi,random_state=self.random_state,combine_range=self.combine_range)
+                                           tr_y=tr_y,pred_val=pred_val,val_y=val_y, tr_Xi=tr_Xi,val_Xi=val_Xi,random_state=self.random_state
+                                           ,combine_range=self.combine_range, wc = self.wc)
             model1 = self.lv_model
             st_time = time.time()
             model1.fit(tr_Xi,val_Xi,residual,residual_val,self.ui_shape)

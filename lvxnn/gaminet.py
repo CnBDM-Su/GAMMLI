@@ -11,7 +11,6 @@ from sklearn.preprocessing import MinMaxScaler,OneHotEncoder
 from .layers import *
 from .utils import get_interaction_list
 
-
 class GAMINet(tf.keras.Model):
 
     def __init__(self, meta_info,
@@ -633,22 +632,12 @@ class GAMINet(tf.keras.Model):
                 print("Interaction tuning epoch: %d, train loss: %0.5f, val loss: %0.5f" %
                       (epoch + 1, self.err_train_interaction_tuning[-1], self.err_val_interaction_tuning[-1]))
 
-    def fit(self, train_x, train_y):
+    def fit(self, tr_x, val_x, tr_y, val_y, tr_idx, val_idx):
         
         ## data loading
-        n_samples = train_x.shape[0]
-        indices = np.arange(n_samples)
-        if self.task_type == "Regression":
-            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
-                                          random_state=self.random_state)
-        elif self.task_type == "Classification":
-            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
-                                      stratify=train_y, random_state=self.random_state)
-            
-            
-        elif self.task_type == "Ordinal_Regression":
-            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
-                                          random_state=self.random_state)
+
+        if self.task_type == "Ordinal_Regression":
+
             tr_y_c = self.coding(tr_y)
             idx = np.argsort(tr_y.reshape(1,-1))[0][::-1]
             tr_y = tr_y_c[idx]
@@ -657,8 +646,7 @@ class GAMINet(tf.keras.Model):
             val_y = self.coding(val_y)
             
         elif self.task_type == "MultiClassification":
-            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=self.val_ratio, 
-                                          random_state=self.random_state)
+
             enc = OneHotEncoder()
             enc.fit(tr_y.reshape(-1,1))
             tr_y = enc.transform(tr_y.reshape(-1,1)).toarray()

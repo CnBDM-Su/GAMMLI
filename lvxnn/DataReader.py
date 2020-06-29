@@ -10,6 +10,7 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import OrdinalEncoder
 from collections import OrderedDict
+from sklearn.model_selection import train_test_split
 
 
 def reduce_mem_usage(df):
@@ -76,29 +77,44 @@ def data_index_get(train_x, feat_dict):
 
     return Xi
 
-def cold_index(train_x, test_x, feat_dict):
+def cold_index(train_x, test_x, val_x, feat_dict):
     train = pd.DataFrame(train_x[:,-2:])
     test = pd.DataFrame(test_x[:,-2:])
-    cold_num = []
+    val = pd.DataFrame(val_x[:,-2:])
+    cold_num_te = []
+    cold_num_val = []
     for col in train.columns:
         num = 0
         tr = pd.DataFrame(train.iloc[:,col])
         te = pd.DataFrame(test.iloc[:,col])
+        va = pd.DataFrame(val.iloc[:,col])
 
         tr = tr.drop_duplicates()
         te = te.drop_duplicates()
+        va = va.drop_duplicates()
 
         one = np.ones(tr.shape)
-        tr = pd.concat([tr,pd.DataFrame(one,columns=['signal'])],1)
-        re = pd.merge(te,tr,how='left')
+        tr = pd.concat([tr.reset_index(drop=True),pd.DataFrame(one,columns=['signal'])],1)
+        re = pd.merge(pd.DataFrame(te),tr,how='left')
         re = re[re.iloc[:,1].isna()]
+        re2 = pd.merge(pd.DataFrame(va),tr,how='left')
+        re2 = re2p[re2.iloc[:,1].isna()]
 
         for i in re.iloc[:,0]:
             feat_dict[col][i]='cold'
             num += 1
-        cold_num.append(num)
-    print('cold start user:',cold_num[0])
-    print('cold start item:',cold_num[1])
+        cold_num_te.append(num)
+        
+        for i in re2.iloc[:,0]:
+            feat_dict[col][i]='cold'
+            num += 1
+        cold_num_val.append(num)
+            
+            
+    print('test cold start user:',cold_num_te[0])
+    print('test cold start item:',cold_num_te[1])
+    print('validation cold start user:',cold_num_val[0])
+    print('validation cold start item:',cold_num_val[1])
     
     return feat_dict
     
@@ -139,8 +155,38 @@ def load_meta_info(data,meta_info,task_type,path="./data/",  rand_seed=0):
     #return train_x, test_x, train_y, test_y, task_type, meta_info
     return xx.astype(np.float32), y, meta_info
 
+def data_split(train_x, train_y, test_x, test_y, task_type, wc, random_state):
+    
+    if wc == 'warm':
+        n_samples = train_x.shape[0]
+        indices = np.arange(n_samples)
+        
+        if task_type == "Regression":
+            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=0.125, 
+                                          random_state=random_state)
+        elif task_type == "Classification":
+            tr_x, val_x, tr_y, val_y, tr_idx, val_idx = train_test_split(train_x, train_y, indices, test_size=0.125, 
+                                      stratify=train_y, random_state=random_state)
+            
+        return tr_x, val_x, test_x, tr_y, val_y, test_y, tr_idx, val_idx 
+    if wc == 'cold':
+        n_samples = test_x.shape[0]
+        indices = np.arange(n_samples)
+        
+        if task_type == "Regression":
+            te_x, val_x, te_y, val_y, te_idx, val_idx = train_test_split(test_x, test_y, indices, test_size=0.333, 
+                                          random_state=random_state)
+        elif task_type == "Classification":
+            te_x, val_x, te_y, val_y, te_idx, val_idx = train_test_split(test_x, test_y, indices, test_size=0.333, 
+                                      stratify=train_y, random_state=random_state)
+        
+        tr_idx = np.arange(train_x.shape[0])
+            
+        return train_x, val_x, te_x, train_y, val_y, te_y, tr_idx, val_idx
 
-def data_initialize(data,test,meta_info_o,task_type):
+
+
+def data_initialize(data,test,meta_info_o,task_type, wc):
 
     #total = pd.concat([data,test],0)
     #meta_info = create_meta_info(total)
@@ -149,16 +195,25 @@ def data_initialize(data,test,meta_info_o,task_type):
     test = reduce_mem_usage(test)
     xx, y, meta_info = load_meta_info(data,meta_info_o,task_type)
     xx_t , y_t, meta_info_t = load_meta_info(test,meta_info_o,task_type)
-    feat_dict, feat_dim, ui_shape= data_index(xx)
-    Xi = data_index_get(xx,feat_dict)
-    feat_dict = cold_index(xx,xx_t,feat_dict)
-    Xi_t = data_index_get(xx_t,feat_dict)
+    tr_x, val_x, te_x, tr_y, val_y, te_y, tr_idx, val_idx = data_split(xx, y, xx_t, y_t, task_type, wc)
+    feat_dict, feat_dim, ui_shape= data_index(tr_x)
+    Xi = data_index_get(tr_x,feat_dict)
+    if wc == 'warm':
+        Xi_val = data_index_get(val_x,feat_dict) 
+    feat_dict = cold_index(tr_x,te_x,val_x,feat_dict)
+    if wc == 'cold':
+        Xi_val = data_index_get(val_x,feat_dict)
+    Xi_t = data_index_get(te_x,feat_dict)
     Xi[:,1]=Xi[:,1]-ui_shape[0]
     for i in range(Xi_t.shape[0]):
         if Xi_t[i,1] != 'cold':
             Xi_t[i,1] = int(Xi_t[i,1])-ui_shape[0]
-    xx = xx[:,:-2]
-    xx_t = xx_t[:,:-2]
+    for i in range(Xi_val.shape[0]):
+        if Xi_val[i,1] != 'cold':
+            Xi_val[i,1] = int(Xi_val[i,1])-ui_shape[0]
+    xx = tr_x[:,:-2]
+    xx_t = te_x[:,:-2]
+    val_x = val_x[:,:-2]
     meta_info.pop('user_id')
     meta_info.pop('item_id')
 
@@ -168,5 +223,5 @@ def data_initialize(data,test,meta_info_o,task_type):
     model_info['ui_shape'] = ui_shape
 
 
-    return xx, Xi, y, xx_t, Xi_t, y_t, meta_info, model_info
+    return xx, Xi, y, tr_idx, xx_t, Xi_t, y_t, val_x, val_y, val_idx, meta_info, model_info
 
