@@ -23,10 +23,13 @@ from DataReader import FeatureDictionary, DataParser
 from DeepFM import DeepFM
 
 
-def deepfm_fm(wc, train, test, X_train, tr_Xi, y_train , X_test , te_Xi, y_test, meta_info, model_info, task_type="Regression", val_ratio=0.2, random_state=0, epochs=10):
+def deepfm_fm(wc, train, test, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx, val_idx, meta_info, model_info, task_type="Regression", val_ratio=0.2, random_state=0, epochs=10):
 
     dfTrain = train
     dfTest = test
+    
+    train_x = train.iloc[:,:-1].values
+    train_y = train.iloc[:,-1].values
     
     NUMERIC_COLS = []
     CATEGORICAL_COLS = []
@@ -45,7 +48,7 @@ def deepfm_fm(wc, train, test, X_train, tr_Xi, y_train , X_test , te_Xi, y_test,
         
 
     folds = list(KFold(n_splits=3, shuffle=True,
-                             random_state=random_state).split(X_train, y_train))
+                             random_state=random_state).split(train_x, train_y))
     
     # params
     dfm_params = {
@@ -118,15 +121,18 @@ def deepfm_fm(wc, train, test, X_train, tr_Xi, y_train , X_test , te_Xi, y_test,
             
             
                 if wc == 'warm':
-                    
-                    warm_y = y_test[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
-                    warm_pred = y_test_dfm[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                    if [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]:
+                        warm_y = te_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                        warm_pred = y_test_dfm[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                    else:
+                        warm_y = te_y
+                        warm_pred= y_test_dfm
                     warm_mae.append(mean_absolute_error(warm_y,warm_pred))
                     warm_rmse.append(mean_squared_error(warm_y,warm_pred)**0.5)
     
                 if wc == 'cold':
                     
-                    cold_y = y_test[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                    cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                     cold_pred = y_test_dfm[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                     cold_mae.append(mean_absolute_error(cold_y,cold_pred))
                     cold_rmse.append(mean_squared_error(cold_y,cold_pred)**0.5)
@@ -167,14 +173,18 @@ def deepfm_fm(wc, train, test, X_train, tr_Xi, y_train , X_test , te_Xi, y_test,
             
                 if wc == 'warm':            
 
-                    warm_y = y_test[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
-                    warm_pred = y_test_dfm[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                    if [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]:
+                        warm_y = te_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                        warm_pred = y_test_dfm[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                    else:
+                        warm_y = te_y
+                        warm_pred= y_test_dfm
                     warm_auc.append(roc_auc_score(warm_y,warm_pred))
                     warm_logloss.append(log_loss(warm_y,warm_pred))
                     
                 if wc == 'cold':
                     
-                    cold_y = y_test[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                    cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                     cold_pred = y_test_dfm[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]    
                     cold_auc.append(roc_auc_score(cold_y,cold_pred))
                     cold_logloss.append(log_loss(cold_y,cold_pred))

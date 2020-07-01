@@ -10,20 +10,20 @@ from xgboost import XGBClassifier,XGBRegressor
 import numpy as np
 import pandas as pd
 
-def xgb(wc, train, test, train_x, tr_Xi, train_y , test_x , te_Xi, test_y, meta_info, model_info, task_type="Regression", val_ratio=0.2, random_state=0):
+def xgb(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx, val_idx, meta_info, model_info, task_type="Regression", random_state=0):
     
-    datanum = train_x.shape[0]
-    indices = np.arange(datanum)
+    x = np.concatenate([tr_x,val_x])
+    y = np.concatenate([tr_y,val_y])
+    
+    val_fold = np.ones(x.shape[0])
+    val_fold[:tr_x.shape[0]] = -1
     if task_type == "Regression":
-        idx1, idx2 = train_test_split(indices, test_size=val_ratio, random_state=random_state)
-        val_fold = np.ones((len(indices)))
-        val_fold[idx1] = -1
 
         base = XGBRegressor(n_estimators=100, random_state=random_state)
         grid = GridSearchCV(base, param_grid={"max_depth": (3, 4, 5, 6, 7, 8)},
                             scoring={"mse": make_scorer(mean_squared_error, greater_is_better=False)},
                             cv=PredefinedSplit(val_fold), refit=False, n_jobs=-1, error_score=np.nan)
-        grid.fit(train_x, train_y.ravel())
+        grid.fit(x, y.ravel())
         model = grid.estimator.set_params(**grid.cv_results_["params"][np.where((grid.cv_results_["rank_test_mse"] == 1))[0][0]])
         cold_mae = []
         cold_rmse = []
@@ -31,19 +31,22 @@ def xgb(wc, train, test, train_x, tr_Xi, train_y , test_x , te_Xi, test_y, meta_
         warm_rmse = []
         for times in range(10):
             model.random_state=times
-            model.fit(train_x[idx1, :], train_y[idx1, :].ravel())
-            pred_test = model.predict(test_x).reshape([-1, 1])
+            model.fit(tr_x, tr_y.ravel())
+            pred_test = model.predict(te_x).reshape([-1, 1])
             
             if wc == 'warm':
-                
-                warm_y = test_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
-                warm_pred = pred_test[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                if [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]:
+                    warm_y = te_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                    warm_pred = pred_test[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                else:
+                    warm_y = te_y
+                    warm_pred= pred_test
                 warm_mae.append(mean_absolute_error(warm_y,warm_pred))
                 warm_rmse.append(mean_squared_error(warm_y,warm_pred)**0.5)
                 
             if wc == 'cold':
             
-                cold_y = test_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                 cold_pred = pred_test[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                 cold_mae.append(mean_absolute_error(cold_y,cold_pred))
                 cold_rmse.append(mean_squared_error(cold_y,cold_pred)**0.5)
@@ -62,15 +65,12 @@ def xgb(wc, train, test, train_x, tr_Xi, train_y , test_x , te_Xi, test_y, meta_
 
 
     elif task_type == "Classification":
-        idx1, idx2 = train_test_split(indices, test_size=val_ratio, stratify=train_y, random_state=random_state)
-        val_fold = np.ones((len(indices)))
-        val_fold[idx1] = -1
 
         base = XGBClassifier(n_estimators=100, random_state=random_state)
         grid = GridSearchCV(base, param_grid={"max_depth": (3, 4, 5, 6, 7, 8)},
                             scoring={"auc": make_scorer(roc_auc_score, needs_proba=True)},
                             cv=PredefinedSplit(val_fold), refit=False, n_jobs=-1, error_score=np.nan)
-        grid.fit(train_x, train_y.ravel())
+        grid.fit(x, y.ravel())
         model = grid.estimator.set_params(**grid.cv_results_["params"][np.where((grid.cv_results_["rank_test_auc"] == 1))[0][0]])
         
         cold_auc = []
@@ -80,19 +80,22 @@ def xgb(wc, train, test, train_x, tr_Xi, train_y , test_x , te_Xi, test_y, meta_
         for times in range(10):
             
             model.random_state=times
-            model.fit(train_x, train_y.ravel())
-            pred_test = model.predict_proba(test_x)[:,-1].reshape([-1, 1])
+            model.fit(tr_x, tr_y.ravel())
+            pred_test = model.predict_proba(te_x)[:,-1].reshape([-1, 1])
             
             if wc == 'warm':
-
-                warm_y = test_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
-                warm_pred = pred_test[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                if [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]:
+                    warm_y = te_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                    warm_pred = pred_test[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                else:
+                    warm_y = te_y
+                    warm_pred= pred_test
                 warm_auc.append(roc_auc_score(warm_y,warm_pred))
                 warm_logloss.append(log_loss(warm_y,warm_pred))   
                 
             if wc == 'cold':
                 
-                cold_y = test_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                 cold_pred = pred_test[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                 cold_auc.append(roc_auc_score(cold_y,cold_pred))
                 cold_logloss.append(log_loss(cold_y,cold_pred))

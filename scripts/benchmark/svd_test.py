@@ -8,32 +8,27 @@ Created on Fri Jun 19 15:36:56 2020
 from surprise import SVD
 from surprise import Dataset
 from surprise import Reader
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error,roc_auc_score,mean_absolute_error,log_loss
 import numpy as np
 import pandas as pd
 
-def svd(wc, train, test, train_x, tr_Xi, train_y , test_x , te_Xi, test_y, meta_info, model_info, task_type="Regression", val_ratio=0.2, random_state=0):
+def svd(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx, val_idx, meta_info, model_info, task_type="Regression", random_state=0):
     
-    datanum = train_x.shape[0]
-    indices = np.arange(datanum)
-    Xi = train.iloc[:,-3:-1].values
-    Xi_t = test.iloc[:,-3:-1].values
+
+    Xi = tr_x[:,-2:]
+    Xi_t = te_x[:,-2:]
         
     tr_ratings_dict = {'itemID': Xi[:,1].tolist(),
                 'userID': Xi[:,0].tolist(),
-                'rating': train_y.ravel().tolist()}
+                'rating': tr_y.ravel().tolist()}
 
     tr_df = pd.DataFrame(tr_ratings_dict)
-    reader = Reader(rating_scale=(train_y.min(), train_y.max()))
+    reader = Reader(rating_scale=(tr_y.min(), tr_y.max()))
         
     tr_data = Dataset.load_from_df(tr_df[['userID', 'itemID', 'rating']], reader)
     tr_data = tr_data.build_full_trainset()
     
     if task_type == "Regression":
-        idx1, idx2 = train_test_split(indices, test_size=val_ratio, random_state=random_state)
-        val_fold = np.ones((len(indices)))
-        val_fold[idx1] = -1
                 
         base = SVD(n_factors=5)
         
@@ -53,15 +48,18 @@ def svd(wc, train, test, train_x, tr_Xi, train_y , test_x , te_Xi, test_y, meta_
             pred2 = np.array(pred).ravel()
             
             if wc == 'warm':
-            
-                warm_y = test_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
-                warm_pred = pred2[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                if [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]:
+                    warm_y = te_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                    warm_pred = pred2[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                else:
+                    warm_y = te_y
+                    warm_pred= pred2
                 warm_mae.append(mean_absolute_error(warm_y,warm_pred))
                 warm_rmse.append(mean_squared_error(warm_y,warm_pred)**0.5)
                 
             if wc == 'cold':
                 
-                cold_y = test_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                 cold_pred = pred2[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                 cold_mae.append(mean_absolute_error(cold_y,cold_pred))
                 cold_rmse.append(mean_squared_error(cold_y,cold_pred)**0.5)
@@ -80,9 +78,6 @@ def svd(wc, train, test, train_x, tr_Xi, train_y , test_x , te_Xi, test_y, meta_
         return result
     
     elif task_type == "Classification":
-        idx1, idx2 = train_test_split(indices, test_size=val_ratio, stratify=train_y, random_state=random_state)
-        val_fold = np.ones((len(indices)))
-        val_fold[idx1] = -1
 
         base = SVD(n_factors=5)
         
@@ -103,14 +98,18 @@ def svd(wc, train, test, train_x, tr_Xi, train_y , test_x , te_Xi, test_y, meta_
             
             if wc == 'warm':
                 
-                warm_y = test_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
-                warm_pred = pred2[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                if [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]:
+                    warm_y = te_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                    warm_pred = pred2[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
+                else:
+                    warm_y = te_y
+                    warm_pred= pred2
                 warm_auc.append(roc_auc_score(warm_y,warm_pred))
                 warm_logloss.append(log_loss(warm_y,warm_pred))
                 
             if wc == 'cold':
                 
-                cold_y = test_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                 cold_pred = pred2[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]            
                 cold_auc.append(roc_auc_score(cold_y,cold_pred))
                 cold_logloss.append(log_loss(cold_y,cold_pred))
