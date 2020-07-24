@@ -300,6 +300,8 @@ class DeepFM(BaseEstimator, TransformerMixin):
                 else:
                     print("[%d] train-result=%.4f [%.1f s]"
                         % (epoch + 1, train_result, time() - t1))
+            if train_result ==0:
+                break
             if has_valid and early_stopping and self.training_termination(self.valid_result):
                 break
 
@@ -330,14 +332,20 @@ class DeepFM(BaseEstimator, TransformerMixin):
 
 
     def training_termination(self, valid_result):
-        if len(valid_result) > 3:
+        if np.isnan(valid_result[-1]):
+            return True
+        if len(valid_result) > 5:
             if self.greater_is_better:
                 if valid_result[-1] < valid_result[-2] and \
-                    valid_result[-2] < valid_result[-3]:
+                    valid_result[-2] < valid_result[-3] and\
+                    valid_result[-3] < valid_result[-4] and\
+                    valid_result[-4] < valid_result[-5]:
                     return True
             else:
                 if valid_result[-1] > valid_result[-2] and \
-                    valid_result[-2] > valid_result[-3]:
+                    valid_result[-2] > valid_result[-3] and \
+                    valid_result[-3] > valid_result[-4] and\
+                    valid_result[-4] > valid_result[-5]:
                     return True
         return False
 
@@ -381,6 +389,7 @@ class DeepFM(BaseEstimator, TransformerMixin):
         :param y: label of each sample in the dataset
         :return: metric of the evaluation
         """
+
         y_pred = self.predict(Xi, Xv)
         return self.eval_metric(y, y_pred)
 

@@ -15,7 +15,7 @@ from interpret.glassbox.ebm.internal import NativeEBM
 from interpret.glassbox.ebm.ebm import EBMPreprocessor
 
 
-def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_list, feature_type_list, active_main_effect_index, task_type="Regression"):
+def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_list, feature_type_list, active_main_effect_index, user_feature_list, item_feature_list, task_type="Regression", interaction_restrict=False):
 
     if task_type == "Regression":
         num_classes_ = -1
@@ -74,7 +74,12 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_li
     ) as native_ebm:
 
         interaction_scores = []
-        interaction_indices = [item for item in combinations(range(len(preprocessor_.col_types_)), 2)]
+        if interaction_restrict:
+            interaction_indices = [item for item in combinations(user_feature_list,2)] + [item for item in combinations(item_feature_list,2)]
+            
+        else:
+            interaction_indices = [item for item in combinations(range(len(preprocessor_.col_types_)), 2)]
+        
         for pair in interaction_indices:
             if (pair[0] in active_main_effect_index) or (pair[1] in active_main_effect_index):
                 score = native_ebm.fast_interaction_score(pair)
@@ -528,25 +533,50 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interac
             os.makedirs(folder)
         fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
-def local_visualize(data_dict_local, folder="./results/", name="demo", save_png=False, save_eps=False):
+def local_visualize(data_dict_local, folder="./results/", name="demo", save_png=False, save_eps=False , task_type='Regression'):
 
-    max_ids = len(data_dict_local["active_indice"])
-    fig = plt.figure(figsize=(6, round((len(data_dict_local["active_indice"]) + 1) * 0.45)))
-    plt.barh(np.arange(len(data_dict_local["active_indice"])), data_dict_local["scores"][data_dict_local["active_indice"]][::-1])
-    plt.yticks(np.arange(len(data_dict_local["active_indice"])), data_dict_local["effect_names"][data_dict_local["active_indice"]][::-1])
+    from matplotlib import pyplot as plt
 
+    left_x,left_y=0.1,0.1
+    width,height=1,1.5
+    left_xh=left_x+width+0.1
+    left_xhh=left_xh+0.5
+
+    scatter_area=[left_x,left_y,width,height]
+    hist_y=[left_xh,left_y,0.2,height]
+    hist_yy = [left_xhh,left_y,0.2,height]
+
+    plt.figure(figsize=(6, round((len(data_dict_local["active_indice"]) + 1) * 0.45)))
+
+    area_scatter=plt.axes(scatter_area)
+    area_histy=plt.axes(hist_y)
+    area_histyy=plt.axes(hist_yy)
+
+    
+    final_pre = data_dict_local["predicted"]+data_dict_local["scores"][0]
+    if task_type== 'Classification':
+        if final_pre<0:
+            final_pre =0
+        if final_pre>1:
+            final_pre =1
     if "actual" in data_dict_local.keys():
-        title = "Predicted: %0.4f | Actual: %0.4f" % (data_dict_local["predicted"], data_dict_local["actual"])  
+        area_scatter.set_title("Explicit Predicted: %0.4f | Actual: %0.4f" % (data_dict_local["predicted"], data_dict_local["actual"]))
+        area_histyy.set_title("Final Predicted: %0.4f | Actual: %0.4f" % (final_pre, data_dict_local["actual"]))
     else:
-        title = "Predicted: %0.4f"% (data_dict_local["predicted"])
-    plt.title(title, fontsize=12)
+        area_scatter.set_title("Explicit Predicted: %0.4f"% (data_dict_local["predicted"]))
+        area_histyy.set_title("Final Predicted: %0.4f"% (final_pre))
+    
+    area_scatter.barh(data_dict_local["effect_names"][data_dict_local["active_indice"][1:]][::-1].tolist(), data_dict_local["scores"][data_dict_local["active_indice"][1:]][::-1], )
+    area_scatter.set_yticks(np.arange(len(data_dict_local["active_indice"])))
+    
+    area_histy.set_title('importance')
+    if task_type == 'Classification':        
+        area_histy.pie([abs((1-data_dict_local['actual'][0][0])- data_dict_local['predicted'][0][0])*100,abs(data_dict_local['scores'][0])*100],labels=['explicit','implicit'],shadow=True,explode=[0,1],autopct="%0.2f%%")
+        area_histyy.bar(['explicit','implicit'],[(1-data_dict_local['actual'][0][0])- data_dict_local['predicted'][0][0],data_dict_local['scores'][0]])
+    else:
+        area_histy.pie([abs(data_dict_local['predicted'][0][0])*100,abs(data_dict_local['scores'][0])*100],labels=['explicit','implicit'],shadow=True,explode=[0,1],autopct="%0.2f%%")
+        area_histyy.bar(['explicit','implicit'],[data_dict_local['predicted'][0][0],data_dict_local['scores'][0]])
+        
+    plt.show()
+    
 
-    save_path = folder + name
-    if (max_ids > 0) & save_eps:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
-    if (max_ids > 0) & save_png:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)

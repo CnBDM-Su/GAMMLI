@@ -11,14 +11,14 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import OrdinalEncoder
 from collections import OrderedDict
 from sklearn.model_selection import train_test_split
+from copy import deepcopy
 
 
-def reduce_mem_usage(df):
+def reduce_mem_usage(df,verbose):
     """ iterate through all the columns of a dataframe and modify the data type
         to reduce memory usage.        
     """
     start_mem = df.memory_usage().sum() / 1024**2
-    print('Memory usage of dataframe is {:.2f} MB'.format(start_mem))
     
     for col in df.columns:
         col_type = df[col].dtype
@@ -46,8 +46,12 @@ def reduce_mem_usage(df):
             df[col] = df[col].astype('category')
 
     end_mem = df.memory_usage().sum() / 1024**2
-    print('Memory usage after optimization is: {:.2f} MB'.format(end_mem))
-    print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
+    
+    if verbose:
+        
+        print('Memory usage of dataframe is {:.2f} MB'.format(start_mem))
+        print('Memory usage after optimization is: {:.2f} MB'.format(end_mem))
+        print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
     
     return df
 
@@ -77,7 +81,7 @@ def data_index_get(train_x, feat_dict):
 
     return Xi
 
-def cold_index(train_x, test_x, val_x, feat_dict):
+def cold_index(train_x, test_x, val_x, feat_dict, verbose):
     train = pd.DataFrame(train_x[:,-2:])
     test = pd.DataFrame(test_x[:,-2:])
     val = pd.DataFrame(val_x[:,-2:])
@@ -85,6 +89,7 @@ def cold_index(train_x, test_x, val_x, feat_dict):
     cold_num_val = []
     for col in train.columns:
         num = 0
+        num1 = 0
         tr = pd.DataFrame(train.iloc[:,col])
         te = pd.DataFrame(test.iloc[:,col])
         va = pd.DataFrame(val.iloc[:,col])
@@ -98,7 +103,7 @@ def cold_index(train_x, test_x, val_x, feat_dict):
         re = pd.merge(pd.DataFrame(te),tr,how='left')
         re = re[re.iloc[:,1].isna()]
         re2 = pd.merge(pd.DataFrame(va),tr,how='left')
-        re2 = re2p[re2.iloc[:,1].isna()]
+        re2 = re2[re2.iloc[:,1].isna()]
 
         for i in re.iloc[:,0]:
             feat_dict[col][i]='cold'
@@ -107,53 +112,56 @@ def cold_index(train_x, test_x, val_x, feat_dict):
         
         for i in re2.iloc[:,0]:
             feat_dict[col][i]='cold'
-            num += 1
-        cold_num_val.append(num)
+            num1 += 1
+        cold_num_val.append(num1)
             
             
-    print('test cold start user:',cold_num_te[0])
-    print('test cold start item:',cold_num_te[1])
-    print('validation cold start user:',cold_num_val[0])
-    print('validation cold start item:',cold_num_val[1])
+    if verbose:
+        print('test cold start user:',cold_num_te[0])
+        print('test cold start item:',cold_num_te[1])
+        print('validation cold start user:',cold_num_val[0])
+        print('validation cold start item:',cold_num_val[1])
     
     return feat_dict
     
 
 def load_meta_info(data,meta_info,task_type,path="./data/",  rand_seed=0):
     #data = pd.read_csv(path + "movie_lens/train.csv", header=1)
-
+    meta_info_origin = deepcopy(meta_info)
     x, y = data.iloc[:,:-1].values, data.iloc[:,[-1]].values
     xx = np.zeros(x.shape)
-    for i, (key, item) in enumerate(meta_info.items()):
+    for i, (key, item) in enumerate(meta_info_origin.items()):
         if item['type'] == "target":
             if task_type == 'Regression':
-                continue
+                sy = MinMaxScaler((-1, 1))
+                y = sy.fit_transform(y)
+                meta_info[key]['scaler'] = sy
             elif task_type == 'Classification':
                 
-                enc = OrdinalEncoder()
-                enc.fit(y)
-                y = enc.transform(y)
+                sy = OrdinalEncoder()
+                sy.fit(y)
+                y = sy.transform(y)
             #sx = MinMaxScaler((0, 1))
             #y = sx.fit_transform(y)
             
-            #meta_info[key]["scaler"] = sx
-            #meta_info[key]["values"] = enc.categories_[0].tolist()
+                #meta_info[key]["scaler"] = sx
+                meta_info_origin[key]["values"] = sy.categories_[0].tolist()
         elif item['type'] == "categorical":
             enc = OrdinalEncoder()
             enc.fit(x[:,[i]])
             ordinal_feature = enc.transform(x[:,[i]])
             xx[:,[i]] = ordinal_feature
-            meta_info[key]["values"] = enc.categories_[0].tolist()
+            meta_info_origin[key]["values"] = enc.categories_[0].tolist()
         elif item['type'] == "id":
             xx[:,[i]] = x[:,[i]]
         else:
             sx = MinMaxScaler((0, 1))
             xx[:,[i]] = sx.fit_transform(x[:,[i]])
-            meta_info[key]["scaler"] = sx
+            meta_info_origin[key]["scaler"] = sx
 
     #train_x, test_x, train_y, test_y = train_test_split(xx.astype(np.float32), y, test_size=test_ratio, random_state=rand_seed)
     #return train_x, test_x, train_y, test_y, task_type, meta_info
-    return xx.astype(np.float32), y, meta_info
+    return xx.astype(np.float32), y, meta_info_origin,sy
 
 def data_split(train_x, train_y, test_x, test_y, task_type, wc, random_state):
     
@@ -186,31 +194,39 @@ def data_split(train_x, train_y, test_x, test_y, task_type, wc, random_state):
 
 
 
-def data_initialize(data,test,meta_info_o,task_type, wc):
+def data_initialize(data,test,meta_info_o,task_type, wc, random_state, verbose):
 
     #total = pd.concat([data,test],0)
     #meta_info = create_meta_info(total)
     #xx_to, y_to, meta_info_to = load_meta_info(total,meta_info,task_type)
-    data = reduce_mem_usage(data)
-    test = reduce_mem_usage(test)
-    xx, y, meta_info = load_meta_info(data,meta_info_o,task_type)
-    xx_t , y_t, meta_info_t = load_meta_info(test,meta_info_o,task_type)
-    tr_x, val_x, te_x, tr_y, val_y, te_y, tr_idx, val_idx = data_split(xx, y, xx_t, y_t, task_type, wc)
-    feat_dict, feat_dim, ui_shape= data_index(tr_x)
+    data = reduce_mem_usage(data,verbose)
+    test = reduce_mem_usage(test,verbose)
+    xx, y, meta_info ,sy= load_meta_info(data,meta_info_o,task_type)
+    xx_t , y_t, meta_info_t , sy_t= load_meta_info(test,meta_info_o,task_type)
+    tr_x, val_x, te_x, tr_y, val_y, te_y, tr_idx, val_idx = data_split(xx, y, xx_t, y_t, task_type, wc, random_state)
+    if wc == 'warm':
+        feat_dict, feat_dim, ui_shape= data_index(xx)
+    if wc == 'cold':
+        feat_dict, feat_dim, ui_shape= data_index(tr_x)
     Xi = data_index_get(tr_x,feat_dict)
     if wc == 'warm':
         Xi_val = data_index_get(val_x,feat_dict) 
-    feat_dict = cold_index(tr_x,te_x,val_x,feat_dict)
+    feat_dict = cold_index(tr_x,te_x,val_x,feat_dict, verbose)
     if wc == 'cold':
         Xi_val = data_index_get(val_x,feat_dict)
     Xi_t = data_index_get(te_x,feat_dict)
+    Xi[:,0].astype(np.float16)
     Xi[:,1]=Xi[:,1]-ui_shape[0]
     for i in range(Xi_t.shape[0]):
         if Xi_t[i,1] != 'cold':
             Xi_t[i,1] = int(Xi_t[i,1])-ui_shape[0]
+        if Xi_t[i,0] != 'cold':
+            Xi_t[i,0] = int(Xi_t[i,0])-0
     for i in range(Xi_val.shape[0]):
         if Xi_val[i,1] != 'cold':
             Xi_val[i,1] = int(Xi_val[i,1])-ui_shape[0]
+        if Xi_val[i,0] != 'cold':
+            Xi_val[i,0] = int(Xi_val[i,0])-0
     xx = tr_x[:,:-2]
     xx_t = te_x[:,:-2]
     val_x = val_x[:,:-2]
@@ -223,5 +239,5 @@ def data_initialize(data,test,meta_info_o,task_type, wc):
     model_info['ui_shape'] = ui_shape
 
 
-    return xx, Xi, y, tr_idx, xx_t, Xi_t, y_t, val_x, val_y, val_idx, meta_info, model_info
+    return xx, Xi, tr_y, tr_idx, xx_t, Xi_t, te_y, val_x, Xi_val, val_y, val_idx, meta_info, model_info ,sy, sy_t
 

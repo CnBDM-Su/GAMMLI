@@ -8,19 +8,30 @@ Created on Fri Jun 19 16:21:22 2020
 import numpy as np
 import pandas as pd 
 import tensorflow as tf
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error,roc_auc_score,mean_absolute_error,log_loss
 import sys
-sys.path.append('../../')
+sys.path.append('../')
 from lvxnn.LVXNN import LV_XNN
+from lvxnn.DataReader import data_initialize
 
-def lvxnn(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx, val_idx, meta_info, model_info, task_type="Regression", random_state=0,params=None):
+def lvxnn( wc, data, meta_info_ori, task_type="Regression", random_state=0, params=None):
+    
+    train, test = train_test_split(data, test_size=0.2, random_state=0)
+    tr_x, tr_Xi, tr_y, tr_idx, te_x, te_Xi, te_y, val_x, val_Xi, val_y, val_idx, meta_info, model_info , sy, sy_t= data_initialize(train, test, meta_info_ori, task_type, 'warm', random_state=0, verbose=True)
 
+
+    rank = params['rank']
     main_effect_epochs = params['main_effect_epochs']
     interaction_epochs = params['interaction_epochs']
     tuning_epochs = params['tuning_epochs']
     mf_training_iters = params['mf_training_iters']
     u_group_num = params['u_group_num']
     i_group_num = params['i_group_num']
+    auto_tune = params['auto_tune']
+    best_ratio = params['best_shrinkage']
+    best_combine_range = params['best_combination']
+    verbose = params['verbose']
     
     if task_type == "Regression":
         cold_mae = []
@@ -29,32 +40,38 @@ def lvxnn(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx
         warm_rmse = []
         #gami_mae = []
         #gami_rmse = []
+        if auto_tune:
         
-        model = LV_XNN(model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=True,
+            model = LV_XNN(model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=min(500, int(0.2*tr_x.shape[0])), lr_bp=0.001, auto_tune=True,
                            interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,alpha=0,
-                           verbose=True, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=1,n_power_iterations=5,n_oversamples=0,
-                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=5,shrinkage_value=20,random_state=0)
-    
-        model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
+                           verbose=False, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=1,n_power_iterations=5,n_oversamples=0,
+                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,shrinkage_value=20,wc=wc)
+            
+            model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
         
-        best_ratio = model.final_mf_model.best_ratio
-        best_combine_range = model.final_mf_model.best_combine_range
+            best_ratio = model.final_mf_model.best_ratio
+            best_combine_range = model.final_mf_model.best_combine_range
         
         for times in range(10):
             
             print(times)
+            
+            train, test = train_test_split(data, test_size=0.2, random_state=times)
+            tr_x, tr_Xi, tr_y, tr_idx, te_x, te_Xi, te_y, val_x, val_Xi, val_y, val_idx, meta_info, model_info ,sy, sy_t= data_initialize(train, test, meta_info_ori, task_type, 'warm', random_state=0, verbose=False)            
 
-            model = LV_XNN(model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=False,
+            model = LV_XNN(model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=min(500, int(0.2*tr_x.shape[0])), lr_bp=0.001, auto_tune=False,
                            interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,alpha=0.5,combine_range=best_combine_range,
-                           verbose=True, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=best_ratio,n_power_iterations=5,n_oversamples=0,
-                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=5,shrinkage_value=20,random_state=times)
+                           verbose=verbose, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=best_ratio,n_power_iterations=5,n_oversamples=0,
+                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,shrinkage_value=20,wc=wc)
     
             model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
             
             pred = model.predict(te_x, te_Xi)
+            pred = sy.inverse_transform(pred.reshape(-1,1))
+            te_y = sy_t.inverse_transform(te_y.reshape(-1,1))
         
             if wc == 'warm':
-                if [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]:
+                if len([(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')])!=1:
                     warm_y = te_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
                     warm_pred = pred[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
                 else:
@@ -65,12 +82,14 @@ def lvxnn(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx
 
                 
             if wc == 'cold':
-                if [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]:
+                try:
+                    [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]
+                    print('no cold samples')
+                    continue
+                except:
                     cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                     cold_pred = pred[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
-                else:
-                    print('no cold samples')
-                    return
+
                 cold_mae.append(mean_absolute_error(cold_y,cold_pred))
                 cold_rmse.append(mean_squared_error(cold_y,cold_pred)**0.5)
                 
@@ -98,31 +117,37 @@ def lvxnn(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx
         #gami_auc = []
         #gami_logloss = []
         
-        model = LV_XNN(model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=True,
-                           interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,alpha=0,
-                           verbose=True,val_ratio=0.125, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=1,n_power_iterations=5,n_oversamples=0,
-                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=5,shrinkage_value=20,random_state=0)
-    
-        model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
+        if auto_tune:
         
-        best_ratio = model.final_mf_model.best_ratio
-        best_combine_range = model.final_mf_model.best_combine_range
+            model = LV_XNN(wc=wc,model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=min(500, int(0.2*tr_x.shape[0])), lr_bp=0.01, auto_tune=True,
+                           interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,alpha=0,
+                           verbose=False,val_ratio=0.125, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=1,n_power_iterations=5,n_oversamples=0,
+                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,shrinkage_value=20)
+    
+            model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
+        
+            best_ratio = model.final_mf_model.best_ratio
+            best_combine_range = model.final_mf_model.best_combine_range
 
+        
         for times in range(10):
             
             print(times)
+            train, test = train_test_split(data, test_size=0.2, random_state=times)
+            tr_x, tr_Xi, tr_y, tr_idx, te_x, te_Xi, te_y, val_x, val_Xi, val_y, val_idx, meta_info, model_info ,sy, sy_t= data_initialize(train, test, meta_info_ori, task_type, 'warm', random_state=0, verbose=False)
 
-            model = LV_XNN(model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=False,
+
+            model = LV_XNN(wc=wc,model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=min(500, int(0.2*tr_x.shape[0])), lr_bp=0.001, auto_tune=False,
                            interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,alpha=0,combine_range=best_combine_range,
-                           verbose=True,val_ratio=0.125, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=best_ratio,n_power_iterations=5,n_oversamples=0,
-                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=5,shrinkage_value=20,random_state=times)
+                           verbose=verbose,val_ratio=0.125, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=best_ratio,n_power_iterations=5,n_oversamples=0,
+                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,shrinkage_value=20)
             
             model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
             
             pred = model.predict(te_x, te_Xi)
             
             if wc == 'warm':
-                if [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]:
+                if len([(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')])!=1:
                     warm_y = te_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
                     warm_pred = pred[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
                 else:
@@ -133,8 +158,14 @@ def lvxnn(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx
                 
             if wc == 'cold':
         
-                cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
-                cold_pred = pred[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                try:
+                    [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]
+                    print('no cold samples')
+                    continue
+                except:
+                    cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                    cold_pred = pred[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+
                 cold_auc.append(roc_auc_score(cold_y,cold_pred))
                 cold_logloss.append(log_loss(cold_y,cold_pred))
                 
@@ -143,7 +174,7 @@ def lvxnn(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx
             result = pd.DataFrame(i_result,columns=['model','warm_auc','warm_logloss','std_warm_auc','std_warm_logloss'])
 
         if wc == 'cold':            
-            i_result = np.array(['LVXNN',np.mean(warm_auc),np.mean(warm_logloss),np.std(warm_auc),np.std(warm_logloss)]).reshape(1,-1)
+            i_result = np.array(['LVXNN',np.mean(cold_auc),np.mean(cold_logloss),np.std(cold_auc),np.std(cold_logloss)]).reshape(1,-1)
             result = pd.DataFrame(i_result,columns=['model','cold_auc','cold_logloss','std_cold_auc','std_cold_logloss'])        
 
             #gami_auc.append(roc_auc_score(te_y,model.final_gam_model.predict(te_x)))

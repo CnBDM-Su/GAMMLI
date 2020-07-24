@@ -33,7 +33,8 @@ class GAMINet(tf.keras.Model):
                  early_stop_thres=100,
                  random_state=0,
                  threshold =0.5,
-                 multi_type_num=0):
+                 multi_type_num=0,
+                 interaction_restrict=False):
 
         super(GAMINet, self).__init__()
         # Parameter initiation
@@ -64,6 +65,7 @@ class GAMINet(tf.keras.Model):
         self.early_stop_thres = early_stop_thres
         self.random_state = random_state
         self.threshold = threshold
+        self.interaction_restrict = interaction_restrict
         
         self.multi_type_num = multi_type_num
         
@@ -79,6 +81,13 @@ class GAMINet(tf.keras.Model):
         self.variables_names = []
         self.feature_type_list = []
         self.interaction_status = False
+        self.user_feature_list = []
+        self.item_feature_list = []
+        for indice, (feature_name, feature_info) in enumerate(self.meta_info.items()):
+            if feature_info["source"] == "user":
+                self.user_feature_list.append(indice)
+            elif feature_info["source"] == "item":
+                self.item_feature_list.append(indice)
         for indice, (feature_name, feature_info) in enumerate(self.meta_info.items()):
             if feature_info["type"] == "target":
                 continue
@@ -275,7 +284,6 @@ class GAMINet(tf.keras.Model):
               * np.array([interaction_norm])
               * self.output_layer.interaction_switcher[:,class_].numpy()[:self.interact_num_added]).reshape([-1, 1]) 
         gamma = np.vstack([gamma, np.zeros((self.interact_num - self.interact_num_added, 1)).reshape([-1, 1]) ]) 
-
         componment_coefs = np.vstack([beta, gamma])
         if np.sum(np.abs(componment_coefs)) > 10**(-10):
             componment_scales = (np.abs(componment_coefs) / np.sum(np.abs(componment_coefs))).reshape([-1])
@@ -462,7 +470,10 @@ class GAMINet(tf.keras.Model):
                                       self.variables_names,
                                       self.feature_type_list,
                                       task_type=self.task_type,
-                                      active_main_effect_index=self.active_main_effect_index)
+                                      active_main_effect_index=self.active_main_effect_index,
+                                      user_feature_list=self.user_feature_list,
+                                      item_feature_list=self.item_feature_list,
+                                      interaction_restrict=self.interaction_restrict)
 
             self.interaction_list = interaction_list_all[:self.interact_num]
             self.interact_num_added = len(self.interaction_list)
@@ -687,7 +698,7 @@ class GAMINet(tf.keras.Model):
             if len(self.active_main_effect_index) == 0:
                 if self.verbose:
                     print("#" * 10 + "No main effect is selected, training stop." + "#" * 10)
-                    return 
+                return 
             elif len(self.active_main_effect_index) < self.input_num:
                 if self.verbose:
                     print(str(self.input_num - len(self.active_main_effect_index)) + " main effects are pruned, start tuning." + "#" * 10)
@@ -916,7 +927,10 @@ class GAMINet(tf.keras.Model):
 
         scores = np.hstack([mf_output,intercept, np.hstack([main_effect_weights, interaction_weights]) 
                                           * np.hstack([main_effect_output, interaction_output])])
-        active_indice = 2 + np.hstack([-2,-1, self.active_main_effect_index[class_], self.input_num + self.active_interaction_index[0].astype(int)])
+        try:
+            active_indice = 2 + np.hstack([-2,-1, self.active_main_effect_index[class_], self.input_num + self.active_interaction_index[0].astype(int)])
+        except:
+            active_indice = 2 + np.hstack([-2,-1, self.active_main_effect_index[class_], self.input_num + self.active_interaction_index.astype(int)])
         effect_names = np.hstack(["Latent_effect","Intercept", 
                           np.array(self.variables_names),
                           [self.variables_names[self.interaction_list[i][0]] + " x " 
@@ -926,7 +940,7 @@ class GAMINet(tf.keras.Model):
             data_dict_local = {"active_indice": active_indice.astype(int),
                      "scores": scores,
                      "effect_names": effect_names,
-                     "predicted": predicted+mf_output, 
+                     "predicted": predicted, 
                      "actual": y}
         else:
             data_dict_local = {"active_indice": active_indice.astype(int),

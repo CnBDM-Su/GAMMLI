@@ -45,6 +45,8 @@ class SoftImpute(object):
             verbose=True,
             u_group = 0,
             i_group = 0,
+            val_u_group = 0,
+            val_i_group = 0,
             scale_ratio=1,
             n_oversamples=10,
             pred_tr=None,
@@ -108,6 +110,8 @@ class SoftImpute(object):
         self.verbose = verbose
         self.u_group = u_group
         self.i_group = i_group
+        self.val_u_group = val_u_group
+        self.val_i_group = val_i_group
         self.scale_ratio = scale_ratio
         self.n_oversamples = n_oversamples
         self.fill_method = init_fill_method
@@ -208,6 +212,32 @@ class SoftImpute(object):
         pred2 = np.ravel(np.array(pred2))
         final_pred = pred2
         return final_pred
+    
+    def predict_cold(self,u,v,s):
+        v=v.T
+        pred2 = []
+        Xi= self.val_Xi
+        val_y = self.val_y
+        for i in range(Xi.shape[0]):
+            if Xi[i,0] != 'cold':
+                u_ = u[int(Xi[i,0])]
+            else:
+                u_ = self.match_u[self.val_u_group[i]]
+            
+            if Xi[i,1] != 'cold':
+                v_ = v[int(Xi[i,1])]
+            else:
+                v_ = self.match_i[self.val_i_group[i]]
+                
+            pred_mf = np.dot(u_, np.multiply(s, v_))
+            if (Xi[i,0] != 'cold') & (Xi[i,1] != 'cold'):
+                pred_mf = val_y[i]
+            pred2.append(pred_mf)
+        pred2 = np.array(pred2)
+        return pred2
+            
+    
+
     '''
     def _verbose(self,X_init, X_val, X_reconstruction, observed_mask, val_mask, i, rank, sign):
         
@@ -236,11 +266,6 @@ class SoftImpute(object):
     '''
     def _verbose(self, X_reconstruction, i, rank):
         
-        pred = self.predict(X_reconstruction,self.tr_Xi)  
-        predval = self.predict(X_reconstruction,self.val_Xi)  
-        
-        self.loss_record.append(self.loss_fn(self.tr_y.ravel(),pred.ravel()+self.pred_tr.ravel()).numpy())
-        self.valloss_record.append(self.loss_fn(self.val_y.ravel(),predval.ravel()+self.pred_val.ravel()).numpy())
         loss = self.loss_record[-1]
         val_loss = self.valloss_record[-1]
         sign = self.sign
@@ -312,11 +337,21 @@ class SoftImpute(object):
                 tuning=True,
                 max_rank=self.max_rank)
             X_reconstruction = self.clip(X_reconstruction)
+            
+            pred = self.predict(X_reconstruction,self.tr_Xi) 
+            if self.wc == 'warm':
+                predval = self.predict(X_reconstruction,self.val_Xi)  
+            else:
+                predval = self.predict_cold(U_thresh,V_thresh,S_thresh)
+        
+            self.loss_record.append(self.loss_fn(self.tr_y.ravel(),pred.ravel()+self.pred_tr.ravel()).numpy())
+            self.valloss_record.append(self.loss_fn(self.val_y.ravel(),predval.ravel()+self.pred_val.ravel()).numpy())
+
 
             # print error on observed data
             if self.verbose:
                 self._verbose(X_reconstruction, i, rank)
-
+                
             converged = self._converged(
                 X_old=X_filled,
                 X_new=X_reconstruction,
@@ -329,6 +364,7 @@ class SoftImpute(object):
 
 
 
+        
         if self.verbose:
             if self.auto_tune == False:
                 print("[SoftImpute] Stopped after iteration %d for lambda=%f" % (

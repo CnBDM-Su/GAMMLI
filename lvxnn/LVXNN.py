@@ -12,7 +12,9 @@ from .LV import LatentVariable
 from .gaminet import GAMINet
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import KMeans 
+from copy import deepcopy
 import networkx as nx
+import matplotlib.pyplot as plt
 
 class LV_XNN:
     def __init__(self,
@@ -32,6 +34,7 @@ class LV_XNN:
                  tuning_epochs=500,
                  interaction_epochs=20,
                  interact_num=20,
+                 interaction_restrict=False,
                  verbose=False,
                  val_ratio=0.2,
                  early_stop_thres=100,
@@ -77,6 +80,7 @@ class LV_XNN:
         self.main_effect_epochs = main_effect_epochs
         self.interaction_epochs = interaction_epochs
         self.interact_num = interact_num
+        self.interaction_restrict = interaction_restrict
 
         self.verbose = verbose
         self.val_ratio = val_ratio
@@ -141,16 +145,28 @@ class LV_XNN:
         item_feature = np.unique(item_feature,axis=0)
         user_feature = user_feature[np.argsort(user_feature[:,-1])]
         item_feature = item_feature[np.argsort(item_feature[:,-1])]
-
+        self.user_id = user_feature[:,-1]
+        self.item_id = item_feature[:,-1]
         user_feature = user_feature[:,:-1]
         item_feature = item_feature[:,:-1]
+        
+        val_user_feature = np.concatenate([val_x[:,self.user_feature_list],val_Xi[:,0].reshape(-1,1)],1)
+        val_item_feature = np.concatenate([val_x[:,self.item_feature_list],val_Xi[:,1].reshape(-1,1)],1)
+        val_user_feature = np.unique(val_user_feature,axis=0)
+        val_item_feature = np.unique(val_item_feature,axis=0)
+        val_user_feature = val_user_feature[np.argsort(val_user_feature[:,-1])]
+        val_item_feature = val_item_feature[np.argsort(val_item_feature[:,-1])]
+        val_user_feature = val_user_feature[:,:-1]
+        val_item_feature = val_item_feature[:,:-1]
 
         if self.u_group_num != 0:
             self.u_group, self.u_group_model = self.main_effect_cluster(user_feature,self.u_group_num)
+            self.val_u_group = self.u_group_model.predict(val_user_feature)
         else:
             self.u_group=0
         if self.i_group_num != 0:
             self.i_group, self.i_group_model = self.main_effect_cluster(item_feature,self.i_group_num)
+            self.val_i_group = self.i_group_model.predict(val_item_feature)
         else:
             self.i_group = 0
 
@@ -167,7 +183,7 @@ class LV_XNN:
                                   interact_grid_size=self.interact_grid_size,activation_func=tf.tanh, batch_size=self.batch_size, lr_bp=self.lr_bp,
                                   main_effect_epochs=self.main_effect_epochs,tuning_epochs=self.tuning_epochs, multi_type_num = self.multi_type_num,
                                   loss_threshold_main=self.loss_threshold_main,loss_threshold_inter=self.loss_threshold_inter,interaction_epochs=self.interaction_epochs,
-                                  verbose=self.verbose, val_ratio=self.val_ratio, early_stop_thres=self.early_stop_thres,random_state=self.random_state)
+                                  verbose=self.verbose, val_ratio=self.val_ratio, early_stop_thres=self.early_stop_thres,random_state=self.random_state,interaction_restrict=self.interaction_restrict)
 
 
         model = self.gami_model
@@ -187,12 +203,12 @@ class LV_XNN:
         print('After the gam stage, training error is %0.5f , validation error is %0.5f' %(error1[-1],val_error1[-1]))
         residual = (tr_y.ravel() - pred_train.ravel()).reshape(-1,1)
         residual_val = (val_y.ravel() - pred_val.ravel()).reshape(-1,1)
-        
+        '''
         if self.task_type == 'Classification':
             residual[abs(residual)<self.epsilon]=0
             residual_val[abs(residual_val)<self.epsilon]=0
             self.residual = residual
-
+        '''
 
 
         #mf fit
@@ -201,7 +217,8 @@ class LV_XNN:
             self.lv_model = LatentVariable(verbose = self.verbose,task_type=self.task_type,max_rank=self.max_rank,max_iters=self.mf_max_iters,alpha=self.alpha,
                                            change_mode=self.change_mode,auto_tune=self.auto_tune,
                                            convergence_threshold=self.convergence_threshold,n_oversamples=self.n_oversamples
-                                           ,u_group = self.u_group,i_group = self.i_group,scale_ratio=self.scale_ratio,pred_tr=pred_train,
+                                           ,u_group = self.u_group,i_group = self.i_group,val_u_group = self.val_u_group,val_i_group = self.val_i_group
+                                           ,scale_ratio=self.scale_ratio,pred_tr=pred_train,
                                            tr_y=tr_y,pred_val=pred_val,val_y=val_y, tr_Xi=tr_Xi,val_Xi=val_Xi,random_state=self.random_state
                                            ,combine_range=self.combine_range, wc = self.wc)
             model1 = self.lv_model
@@ -269,11 +286,7 @@ class LV_XNN:
                 if Xi[i,0] == 'cold':
                     g = self.u_group_model.predict(xx[i,self.user_feature_list].reshape(1,-1))[0]
                     group_pre_u = self.final_mf_model.pre_u
-                    for i in range(1000):
-                        if g in list(group_pre_u.keys()):
-                            g = group_pre_u[g]
-                        else:
-                            break
+                    g = self.new_group(g,group_pre_u)
                     u = self.match_u[g]
                     #u=np.zeros(u.shape)
                 else:
@@ -281,11 +294,7 @@ class LV_XNN:
                 if Xi[i,1] == 'cold':
                     g = self.i_group_model.predict(xx[i,self.item_feature_list].reshape(1,-1))[0]
                     group_pre_i = self.final_mf_model.pre_i
-                    for i in range(1000):
-                        if g in list(group_pre_i.keys()):
-                            g = group_pre_i[g]
-                        else:
-                            break
+                    g = self.new_group(g,group_pre_i)
                     v = self.match_i[g]
                     #v =np.zeros(v.shape)
                 else:
@@ -309,6 +318,25 @@ class LV_XNN:
 
             return pred
 
+    def new_group(self,g, group_pre):
+        for i in range(1000):
+            if g in list(group_pre.keys()):
+                g = group_pre[g]
+            else:
+                break
+        return g
+    
+    def group_back(self,g,group_pre):
+        kid_group = []
+        pre = dict(zip(group_pre.values(), group_pre.keys()))
+        for i in range(1000):
+            if g in list(pre.keys()):
+                g = pre[g]
+                kid_group.append(g)
+            else:
+                break
+        return kid_group
+    
     def linear_global_explain(self):
         self.final_gam_model.global_explain(folder="./results", name="demo", cols_per_row=3, main_density=3, save_png=False, save_eps=False)
 
@@ -365,6 +393,147 @@ class LV_XNN:
             #group[i] = similarity.T[np.lexsort(similarity)][:-1,:]
 
         return dis,closest
+    
+    def group_explain(self,g, u_i):
+    
+        def group_num(u, group):
+            num = 0
+            contain_id = []
+            for j in range(group.shape[0]):
+                if u == group[j]:
+                    contain_id.append(j)
+                    num += 1
+            return num, contain_id
+        
+        if u_i == 'user':
+            kid_group = self.group_back(g, self.final_mf_model.pre_u)
+            num, contain_id = group_num(g,self.u_group)
+            contain_id = self.user_id[contain_id]
+            mean_g = self.match_u[g]
+            std_g = self.var_u[g]**0.5
+            print('kid group:',kid_group)
+            print('contain users:',num)
+            print('mean :',mean_g)
+            print('std :',std_g)
+            v=self.v
+            preference = []
+            for ex_item in range(v.shape[0]):
+                pred_mf = np.dot(mean_g, np.multiply(self.s, v[ex_item,:]))
+                preference.append(pred_mf)
+
+            #数据
+            
+            name=['ind_cco_fin_ult1',
+                  'ind_cder_fin_ult1',
+                  'ind_cno_fin_ult1',
+                  'ind_ctju_fin_ult1',
+                  'ind_ctma_fin_ult1',
+                  'ind_ctop_fin_ult1',
+                  'ind_ctpp_fin_ult1',
+                  'ind_deco_fin_ult1',
+                  'ind_deme_fin_ult1',
+                  'ind_dela_fin_ult1',
+                  'ind_ecue_fin_ult1',
+                  'ind_fond_fin_ult1',
+                  'ind_hip_fin_ult1',
+                  'ind_plan_fin_ult1',
+                  'ind_pres_fin_ult1',
+                  'ind_reca_fin_ult1',
+                  'ind_tjcr_fin_ult1',
+                  'ind_valo_fin_ult1',
+                  'ind_viv_fin_ult1',
+                  'ind_nomina_ult1',
+                  'ind_nom_pens_ult1',
+                  'ind_recibo_ult1']
+            score=preference
+
+            #图像绘制
+            fig,ax=plt.subplots()
+            b=ax.barh(range(len(name)),score,color='#6699CC')
+
+            #设置Y轴刻度线标签
+            ax.set_yticks(range(len(name)))
+            #font=FontProperties(fname=r'/Library/Fonts/Songti.ttc')
+            ax.set_yticklabels(name)
+
+            plt.show()
+            
+            
+        elif u_i == 'item':
+            
+            kid_group = self.group_back(g, self.final_mf_model.pre_i)
+            num, contain_id = group_num(g,self.i_group)
+            contain_id = self.item_id[contain_id]
+            mean_g = self.match_i[g]
+            std_g = self.var_i[g]**0.5
+            
+            
+    def digraph(self, target, related_width):
+    
+        def group_num(u, group):
+            num = 0
+            contain_id = []
+            for j in range(group.shape[0]):
+                if u == group[j]:
+                    contain_id.append(j)
+                    num += 1
+            return num, contain_id
+        
+        
+        edges = {}
+        u_node=[]
+        i_node=[]
+        if target == 'implicit':
+        
+            avg =0
+            for i in self.match_u.keys():
+                user_g = self.match_u[i]
+                u_node.append('u'+str(i))
+                for j in self.match_i.keys():
+                    item_g = self.match_i[j]
+                    pred_mf = np.dot(user_g, np.multiply(self.s, item_g))
+                    edges[('u'+str(i),'i'+str(j))] = pred_mf
+                    avg = avg+pred_mf
+            avg = avg/(len(self.match_u)+len(self.match_i))
+            for j in self.match_i.keys():
+                i_node.append('i'+str(j))
+                    
+        if target == 'explicit':
+            return
+                    
+        G = nx.DiGraph()
+        n_labels = {} 
+        for i in u_node + i_node:
+            G.add_node(i)
+        for node in G.nodes():
+            n_labels[node] = node
+                
+        pos={}
+        for i in range(len(u_node)):
+            un = u_node[i]
+            step = 2/len(u_node)
+            pos[un] = np.array([-1,1-step*i])
+                
+        for i in range(len(i_node)):
+            un = i_node[i]
+            step = 2/len(i_node)
+            pos[un] = np.array([1,1-step*i])
+            
+        for i,j in edges.items():
+            G.add_edges_from([i], weight=j)
+        
+        e_labels = nx.get_edge_attributes(G,'weight')
+        showedge = deepcopy(e_labels)
+        for i,j in e_labels.items():
+            if (j < avg) or (j<0):
+                showedge.pop(i)
+
+        nx.draw_networkx_nodes(G,pos,node_size=300,node_color='r',label=n_labels)
+        nx.draw_networkx_labels(G,pos,n_labels,font_size=10,font_color='black')
+        nx.draw_networkx_edges(G,pos,edgelist=showedge,width=(np.array(list(showedge.values()),dtype=np.float)*related_width).tolist(),arrows=True)
+        #nx.draw_networkx_edges(G,pos,edgelist=G.edges,width=1,alpha=0.5,edge_color='b',style='dashed')
+            
+            
 
     def draw_net(self, dis, closest, threshold):
 
@@ -404,24 +573,29 @@ class LV_XNN:
         nx.draw_networkx_edges(G,pos,edgelist=e_labels,width=1,alpha=0.5,edge_color='b',style='dashed')
 
 
-    def cold_start_analysis(self,x,u_i,confi):
+    def cold_start_analysis(self,xx,u_i,confi):
+        
         if u_i == 'user':
-            group = self.u_group_model.predict(x)
-            mean_g = self.match_u[group[0]]
-            var_g = self.var_u[group[0]]**0.5
+            g = self.u_group_model.predict(xx[:,self.user_feature_list].reshape(1,-1))[0]
+            group_pre_u = self.final_mf_model.pre_u
+            g = self.new_group(g,group_pre_u)
+            mean_g = self.match_u[g]
+            std_g = self.var_u[g]**0.5
 
         if u_i == 'item':
-            group = self.i_group_model.predict(x)
-            mean_g = self.match_i[group[0]]
-            var_g = self.var_i[group[0]]**0.5
+            g = self.i_group_model.predict(xx[:,self.item_feature_list].reshape(1,-1))[0]
+            group_pre_i = self.final_mf_model.pre_i
+            g = self.new_group(g,group_pre_i)
+            mean_g = self.match_i[g]
+            std_g = self.var_i[g]**0.5
 
-        upper = mean_g + confi * var_g
-        lower = mean_g - confi * var_g
+        upper = mean_g + confi * std_g
+        lower = mean_g - confi * std_g
         
-        print('The new '+u_i+' belong to group '+str(group)+'\n mean is '+str(mean_g)+' and std is '+ str(var_g)+
+        print('The new '+u_i+' belong to group '+str(g)+'\n mean is '+str(mean_g)+'\n and std is '+ str(std_g)+
         '\n the confidence interval is ['+str(lower)+','+str(upper)+']')
 
-        return mean_g, var_g, upper, lower
+        return mean_g, std_g, upper, lower
 
 
 

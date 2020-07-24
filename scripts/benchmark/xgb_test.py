@@ -9,8 +9,14 @@ from sklearn.metrics import make_scorer,mean_squared_error,roc_auc_score,mean_ab
 from xgboost import XGBClassifier,XGBRegressor
 import numpy as np
 import pandas as pd
+import sys
+sys.path.append('../')
+from lvxnn.DataReader import data_initialize
 
-def xgb(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx, val_idx, meta_info, model_info, task_type="Regression", random_state=0):
+def xgb(wc, data, meta_info_ori, task_type="Regression", random_state=0):
+    
+    train, test = train_test_split(data, test_size=0.2, random_state=0)
+    tr_x, tr_Xi, tr_y, tr_idx, te_x, te_Xi, te_y, val_x, val_Xi, val_y, val_idx, meta_info, model_info, sy, sy_t= data_initialize(train, test, meta_info_ori, task_type, 'warm', random_state=0, verbose=True)
     
     x = np.concatenate([tr_x,val_x])
     y = np.concatenate([tr_y,val_y])
@@ -30,12 +36,17 @@ def xgb(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx, 
         warm_mae = []
         warm_rmse = []
         for times in range(10):
-            model.random_state=times
+            
+            train, test = train_test_split(data, test_size=0.2, random_state=times)
+            tr_x, tr_Xi, tr_y, tr_idx, te_x, te_Xi, te_y, val_x, val_Xi, val_y, val_idx, meta_info, model_info, sy, sy_t = data_initialize(train, test, meta_info_ori, task_type, 'warm', random_state=0, verbose=False)
+            
             model.fit(tr_x, tr_y.ravel())
             pred_test = model.predict(te_x).reshape([-1, 1])
+            pred_test = sy.inverse_transform(pred_test.reshape(-1,1))
+            te_y = sy_t.inverse_transform(te_y.reshape(-1,1))
             
             if wc == 'warm':
-                if [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]:
+                if len([(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')])!=1:
                     warm_y = te_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
                     warm_pred = pred_test[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
                 else:
@@ -45,9 +56,13 @@ def xgb(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx, 
                 warm_rmse.append(mean_squared_error(warm_y,warm_pred)**0.5)
                 
             if wc == 'cold':
-            
-                cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
-                cold_pred = pred_test[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                try:
+                    [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]
+                    print('no cold samples')
+                    return
+                except:
+                    cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                    cold_pred = pred_test[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                 cold_mae.append(mean_absolute_error(cold_y,cold_pred))
                 cold_rmse.append(mean_squared_error(cold_y,cold_pred)**0.5)
 
@@ -79,12 +94,14 @@ def xgb(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx, 
         warm_logloss = []
         for times in range(10):
             
-            model.random_state=times
+            train, test = train_test_split(data, test_size=0.2, random_state=times)
+            tr_x, tr_Xi, tr_y, tr_idx, te_x, te_Xi, te_y, val_x, val_Xi, val_y, val_idx, meta_info, model_info , sy, sy_t= data_initialize(train, test, meta_info_ori, task_type, 'warm', random_state=0, verbose=False)
+
             model.fit(tr_x, tr_y.ravel())
             pred_test = model.predict_proba(te_x)[:,-1].reshape([-1, 1])
             
             if wc == 'warm':
-                if [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]:
+                if len([(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')])!=1:
                     warm_y = te_y[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
                     warm_pred = pred_test[(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')]
                 else:
@@ -95,8 +112,13 @@ def xgb(wc, tr_x, val_x, te_x, tr_y, val_y, te_y, tr_Xi, val_Xi, te_Xi, tr_idx, 
                 
             if wc == 'cold':
                 
-                cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
-                cold_pred = pred_test[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                try:
+                    [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]
+                    print('no cold samples')
+                    return
+                except:
+                    cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
+                    cold_pred = pred_test[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                 cold_auc.append(roc_auc_score(cold_y,cold_pred))
                 cold_logloss.append(log_loss(cold_y,cold_pred))
 
