@@ -1,0 +1,260 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="English" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>LVXNN &mdash; LVXNN 1.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Get started" href="Get started.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> LVXNN
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="Get started.html">Get started</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">LVXNN</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#lvxnn-model">LVXNN model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#method">method</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">LVXNN</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>LVXNN</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/LVXNN.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="lvxnn">
+<h1>LVXNN<a class="headerlink" href="#lvxnn" title="Permalink to this headline">¶</a></h1>
+<p>Introduce the API of LVXNN</p>
+<div class="section" id="lvxnn-model">
+<h2>LVXNN model<a class="headerlink" href="#lvxnn-model" title="Permalink to this headline">¶</a></h2>
+<p>The LVXNN model setting:</p>
+<p>meta_info=None, data basic information.</p>
+<p>model_info=None, model basic information.</p>
+<p>subnet_arch=[10, 6], subnetwork architecture.</p>
+<p>interact_arch=[20, 10], interact subnetwork architecture.</p>
+<p>activation_func=tf.tanh, activation_function.</p>
+<p>lr_bp=0.001, learning rate.</p>
+<p>loss_threshold_main=0.01, main_effect loss threshold.</p>
+<p>loss_threshold_inter=0.01, interact_effect loss threshold.</p>
+<p>main_grid_size=41, number of the sampling points for main_effect training.</p>
+<p>interact_grid_size=41, number of the sampling points for interact_effect training.</p>
+<p>batch_size=1000, batch size.</p>
+<p>main_effect_epochs=10000, main effect training stage epochs.</p>
+<p>tuning_epochs=500, tuning stage epochs.</p>
+<p>interaction_epochs=20, interact effect training stage epochs.</p>
+<p>interact_num=20, the max interact pair number.</p>
+<p>interaction_restrict=False, whether restrict the user feature and item feature to interact.</p>
+<p>verbose=False, whether show the training state.</p>
+<p>early_stop_thres=100, epoch for starting the early stop.</p>
+<p>shrinkage_value=None, shrinkage value in each epoch of latent effect training.</p>
+<p>convergence_threshold=0.001, convergence threshold for latent effect training.</p>
+<p>mf_training_iters=20, main effect training stage epochs.</p>
+<p>max_rank=None, max rank for the latent variable.</p>
+<p>change_mode = False, whether change the initial value for latent effect training.</p>
+<p>u_group_num=0, number of user group.</p>
+<p>i_group_num=0, number of item group.</p>
+<p>scale_ratio=1, group range shrinkage ratio.</p>
+<p>combine_range=0.99, group combination range.</p>
+<p>auto_tune=False, whether auto tune.</p>
+<p>random_state = 0, random state.</p>
+<p>wc = None, control warm or cold start training.</p>
+</div>
+<div class="section" id="method">
+<h2>method<a class="headerlink" href="#method" title="Permalink to this headline">¶</a></h2>
+<p><strong>fit</strong></p>
+<p>LVXNN.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx), training the model.
+return the trained model.</p>
+<p><strong>predict</strong></p>
+<p>LVXNN.predict(xx,Xi), predict result.
+return predict result.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="Get started.html" class="btn btn-neutral float-left" title="Get started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, suyu
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
