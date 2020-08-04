@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import sys
 sys.path.append('../')
-from lvxnn.DataReader import data_initialize
+from gammli.DataReader import data_initialize
 
 def xgb(wc, data, meta_info_ori, task_type="Regression", random_state=0):
     

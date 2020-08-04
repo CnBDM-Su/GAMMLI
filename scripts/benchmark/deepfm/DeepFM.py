@@ -334,18 +334,20 @@ class DeepFM(BaseEstimator, TransformerMixin):
     def training_termination(self, valid_result):
         if np.isnan(valid_result[-1]):
             return True
-        if len(valid_result) > 5:
+        if len(valid_result) > 3:
             if self.greater_is_better:
                 if valid_result[-1] < valid_result[-2] and \
-                    valid_result[-2] < valid_result[-3] and\
+                    valid_result[-2] < valid_result[-3]and \
                     valid_result[-3] < valid_result[-4] and\
-                    valid_result[-4] < valid_result[-5]:
+                    valid_result[-4] < valid_result[-5]and\
+                    valid_result[-5] < valid_result[-6]:
                     return True
             else:
                 if valid_result[-1] > valid_result[-2] and \
-                    valid_result[-2] > valid_result[-3] and \
+                    valid_result[-2] > valid_result[-3]and \
                     valid_result[-3] > valid_result[-4] and\
-                    valid_result[-4] > valid_result[-5]:
+                    valid_result[-4] > valid_result[-5]and\
+                    valid_result[-5] > valid_result[-6]:
                     return True
         return False
 

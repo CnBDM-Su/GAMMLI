@@ -17,7 +17,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 sys.path.append('../')
-from lvxnn.DataReader import data_initialize
+from gammli.DataReader import data_initialize
 sys.path.append('benchmark/deepfm' )
 from fmDataReader import FeatureDictionary, DataParser
 from DeepFM import DeepFM
@@ -54,7 +54,7 @@ def deepfm_fm(wc, data, meta_info_ori, task_type="Regression", random_state=0, p
     
     # params
     dfm_params = {
-            "embedding_size": 5,
+            "embedding_size": 3,
             "deep_layers": [32, 32],
             "use_deep" : True ,
             "use_fm" : True , 
@@ -62,7 +62,7 @@ def deepfm_fm(wc, data, meta_info_ori, task_type="Regression", random_state=0, p
             "loss_type" : loss_type,
             "epoch": epochs ,
             "batch_size": 500,
-            "learning_rate": 0.001,
+            "learning_rate": 0.01,
             "optimizer_type": "adam",
             "batch_norm": 0,
             "batch_norm_decay": 0.995,
@@ -232,8 +232,8 @@ def deepfm_fm(wc, data, meta_info_ori, task_type="Regression", random_state=0, p
                 dfTrain = dfTrain.astype(str)
                 dfTest = dfTest.astype(str)
                 
-                #dfTrain = train
-                #dfTest = test
+                dfTrain = train
+                dfTest = test
                 
                 #posi = dfTrain.shape[1]-3
                 

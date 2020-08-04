@@ -12,8 +12,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error,roc_auc_score,mean_absolute_error,log_loss
 import sys
 sys.path.append('../')
-from lvxnn.LVXNN import LV_XNN
-from lvxnn.DataReader import data_initialize
+from gammli.GAMMLI import GAMMLI
+from gammli.DataReader import data_initialize
 
 def rtest(wc, data, meta_info_ori, task_type="Regression", random_state=0, params=None):
     
@@ -31,6 +31,7 @@ def rtest(wc, data, meta_info_ori, task_type="Regression", random_state=0, param
     auto_tune = params['auto_tune']
     best_ratio = params['best_shrinkage']
     best_combine_range = params['best_combination']
+    verbose = params['verbose']
     
     if task_type == "Regression":
         cold_mae = []
@@ -41,10 +42,10 @@ def rtest(wc, data, meta_info_ori, task_type="Regression", random_state=0, param
         #gami_rmse = []
         if auto_tune:
         
-            model = LV_XNN(model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=True,
-                           interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,alpha=0,
+            model = GAMMLI(model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=True,
+                           interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,
                            verbose=False, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=1,n_power_iterations=5,n_oversamples=0,
-                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,shrinkage_value=20,random_state=0)
+                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,random_state=0, interaction_restrict='intra')
             
             model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
         
@@ -60,10 +61,10 @@ def rtest(wc, data, meta_info_ori, task_type="Regression", random_state=0, param
             tr_x, tr_Xi, tr_y, tr_idx, te_x, te_Xi, te_y, val_x, val_Xi, val_y, val_idx, meta_info, model_info ,sy, sy_t= data_initialize(train, test, meta_info_ori, task_type, 'warm', random_state=0, verbose=False)            
 
             rank_li.append(rank)
-            model = LV_XNN(model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=False,
-                           interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,alpha=0.5,combine_range=best_combine_range,
-                           verbose=False, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=best_ratio,n_power_iterations=5,n_oversamples=0,
-                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,shrinkage_value=20,random_state=0,wc=wc)
+            model = GAMMLI(model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=False,
+                           interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,combine_range=best_combine_range,
+                           verbose=verbose, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=best_ratio,n_power_iterations=5,n_oversamples=0,
+                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,random_state=0,wc=wc, interaction_restrict='intra')
     
             model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
             
@@ -115,10 +116,10 @@ def rtest(wc, data, meta_info_ori, task_type="Regression", random_state=0, param
         
         if auto_tune:
         
-            model = LV_XNN(wc=wc,model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=True,
-                           interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,alpha=0,
-                           verbose=False,val_ratio=0.125, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=1,n_power_iterations=5,n_oversamples=0,
-                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,shrinkage_value=20,random_state=0)
+            model = GAMMLI(wc=wc,model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=True,
+                           interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,
+                           verbose=False, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=1,n_power_iterations=5,n_oversamples=0,
+                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,random_state=0, interaction_restrict='intra')
     
             model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
         
@@ -133,10 +134,10 @@ def rtest(wc, data, meta_info_ori, task_type="Regression", random_state=0, param
             
             print(rank)
             rank_li.append(rank)
-            model = LV_XNN(wc=wc,model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=False,
-                           interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,alpha=0,combine_range=best_combine_range,
-                           verbose=False,val_ratio=0.125, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=best_ratio,n_power_iterations=5,n_oversamples=0,
-                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,shrinkage_value=20,random_state=0)
+            model = GAMMLI(wc=wc,model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=1000, lr_bp=0.01, auto_tune=False,
+                           interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,combine_range=best_combine_range,
+                           verbose=False, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=best_ratio,n_power_iterations=5,n_oversamples=0,
+                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,random_state=0, interaction_restrict='intra')
             
             model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
             
