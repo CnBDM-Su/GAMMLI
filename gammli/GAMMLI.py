@@ -17,6 +17,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from .utils import global_visualize_density
 from itertools import product
+from scipy.cluster.hierarchy import dendrogram, linkage,fcluster
+from matplotlib import pyplot as plt
 
 class GAMMLI:
     """
@@ -321,6 +323,7 @@ class GAMMLI:
         self.cur_rank = self.final_mf_model.cur_rank
         self.match_i = self.final_mf_model.match_i
         self.match_u = self.final_mf_model.match_u
+        
         self.var_u = self.final_mf_model.var_u
         self.var_i = self.final_mf_model.var_i
         
@@ -330,6 +333,15 @@ class GAMMLI:
 
 
     def predict(self,xx,Xi):
+        
+        """
+        predict result by fitted GAMMLI model.
+
+        :param array xx: the explicit features of samples for predict.
+        :param array Xi: the implicit features of samples for predict.
+        
+        :return: prediction result
+        """
 
         if self.mf_max_iters == 0 or self.final_mf_model==None:
 
@@ -663,7 +675,8 @@ class GAMMLI:
             importance_ = im_list.pop(0)
             if data_dict[i]['importance'] !=0:
                 data_dict[i]['importance'] = importance_
-                
+          
+        '''    
         result = {}
         name_i = {}
         name_u = {}
@@ -706,9 +719,11 @@ class GAMMLI:
             result[i] = result[i][np.argsort(moddd_ver)[::-1],:]
             name_i[i] = name_i[i][np.argsort(moddd_hor)[::-1]]
             name_u[i] = name_u[i][np.argsort(moddd_ver)[::-1]]
-        
+        '''
+        importance = np.sum(im_list) *100
         global_visualize_density(data_dict, save_png=False,save_eps=save_eps, folder=simu_dir, name='s1_global')
-
+        self.latent_graph(importance,save_eps=save_eps)
+        '''
         left_x,left_y=0.5,0.1
         width,height=0.8,0.5
         left_xh=left_x+width+0.1
@@ -753,9 +768,8 @@ class GAMMLI:
         plt.colorbar(ax1,ax=area_1)
         plt.colorbar(ax2,ax=area_2)
         plt.colorbar(ax3,ax=area_3)
+        '''
         
-        if save_eps:
-            plt.savefig("heatmap.eps", bbox_inches="tight", dpi=100)
         
         
         
@@ -786,6 +800,92 @@ class GAMMLI:
         
         if save_eps:
             plt.savefig("relation.eps", bbox_inches="tight", dpi=100)
+            
+    def latent_graph(self,importance,save_eps=False):
+
+        s = self.s
+        user=np.array(list(self.match_u.values()))
+        item=np.array(list(self.match_i.values()))
+        
+        user_m = np.multiply(user,s)
+        item_m = np.multiply(item,s)
+
+        Z1 = linkage(user_m, 'ward')
+        Z2 = linkage(item_m, 'ward')
+
+        left_x,left_y=0.1,0.1
+        width,height=1,0.5
+        left_yh=left_y+0.1+0.1
+        left_yhh=left_yh+0.1+0.1
+        left_xh=left_x+0.1
+        left_xhh=left_xh+0.2
+
+        heatmap_area=[left_xhh,left_y,width,height]
+        user_dendro=[left_x,left_y,0.1,height]
+        item_dendro = [left_xhh,0.25+height,1,0.1]
+        user_heat = [left_xh,left_y,0.1,height]
+        item_heat = [left_xhh, 0.15+height,1,0.1]
+        cbar = [left_xhh+1.05,left_y,0.1,height]
+        plt.figure(figsize=(8,8))
+        plt.suptitle('Latent Interactions (%.2f%%)' %importance,fontsize=14,x=0.8)
+
+        area_1=plt.axes(heatmap_area)
+        area_2=plt.axes(user_dendro)
+        area_3=plt.axes(item_dendro)
+        area_4 =plt.axes(user_heat)
+        area_5 =plt.axes(item_heat)
+        area_6 = plt.axes(cbar)
+
+        h1 =dendrogram(Z1,ax=area_2,orientation='left',no_labels=True)
+        h2 = dendrogram(Z2,ax=area_3,no_labels=True)
+
+        user_s = user_m[h1['leaves']][::-1]
+        item_s = item_m[h2['leaves']]
+
+        f_user = [np.linalg.norm(i) for i in user_s.tolist()]
+        f_item = [np.linalg.norm(j) for j in item_s.tolist()]
+
+        inter = []
+        for i,j in product(user_s, item_s):
+            inter.append(np.dot(i,np.divide(j,s)))
+
+        inter = np.array(inter).reshape(user_s.shape[0],-1)
+
+        ax1 = area_1.imshow(inter,aspect='auto')
+        area_1.yaxis.set_ticks_position('right')
+        area_1.set_yticks(range(len(h1['leaves'])))
+        area_1.set_xticks(range(len(h2['leaves'])))
+        area_1.set_yticklabels([str(i) for i in h1['leaves']][::-1])
+        area_1.set_xticklabels([str(i) for i in h2['leaves']])
+
+
+        ax4 = area_4.imshow(np.array(f_user).reshape(-1,1),aspect='auto')
+        area_2.set_xticks([])
+        area_4.set_xticks([])
+        area_4.set_yticks([])
+        ax5 = area_5.imshow(np.array(f_item).reshape(1,-1),aspect='auto')
+        area_3.set_yticks([])
+        area_5.set_xticks([])
+        area_5.set_yticks([])
+
+        area_2.spines['top'].set_visible(False)
+        area_2.spines['right'].set_visible(False)
+        area_2.spines['bottom'].set_visible(False)
+        area_2.spines['left'].set_visible(False)
+        area_3.spines['top'].set_visible(False)
+        area_3.spines['right'].set_visible(False)
+        area_3.spines['bottom'].set_visible(False)
+        area_3.spines['left'].set_visible(False)
+        area_6.spines['top'].set_visible(False)
+        area_6.spines['right'].set_visible(False)
+        area_6.spines['bottom'].set_visible(False)
+        area_6.spines['left'].set_visible(False)
+        area_6.set_xticks([])
+        area_6.set_yticks([])
+        plt.colorbar(ax1,ax=area_6)
+        
+        if save_eps:
+            plt.savefig("latent.eps", bbox_inches="tight", dpi=100)
         
         
 

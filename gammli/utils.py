@@ -540,22 +540,20 @@ def global_visualize_wo_density(data_dict_global, main_effect_num=10**5, interac
 
 def local_visualize(data_dict_local, folder="./results/", name="demo", save_png=False, save_eps=False , task_type='Regression'):
 
-    from matplotlib import pyplot as plt
-
     left_x,left_y=0.1,0.1
     width,height=1,1.5
-    left_xh=left_x+width+0.2
-    left_xhh=left_xh+0.5
+    #left_xh=left_x+width+0.2
+    #left_xhh=left_xh+0.5
 
     scatter_area=[left_x,left_y,width,height]
-    hist_y=[left_xh,left_y,0.2,height]
-    hist_yy = [left_xhh,left_y,0.2,height]
+    #hist_y=[left_xh,left_y,0.2,height]
+    #hist_yy = [left_xhh,left_y,0.2,height]
 
     plt.figure(figsize=(6, round((len(data_dict_local["active_indice"]) + 1) * 0.45)))
 
     area_scatter=plt.axes(scatter_area)
-    area_histy=plt.axes(hist_y)
-    area_histyy=plt.axes(hist_yy)
+    #area_histy=plt.axes(hist_y)
+    #area_histyy=plt.axes(hist_yy)
 
     
     final_pre = data_dict_local["predicted"]+data_dict_local["scores"][0]
@@ -563,22 +561,22 @@ def local_visualize(data_dict_local, folder="./results/", name="demo", save_png=
         final_pre = data_dict_local["initial_predict"][0]+data_dict_local["scores"][0]
         final_pre = tf.sigmoid(final_pre).numpy()[0]
     if "actual" in data_dict_local.keys():
-        area_scatter.set_title("Explicit Predicted: %0.4f | Actual: %0.4f" % (data_dict_local["predicted"], data_dict_local["actual"]))
-        area_histyy.set_title("Final Predicted: %0.4f | Actual: %0.4f" % (final_pre, data_dict_local["actual"]))
+        area_scatter.set_title("Final Predicted: %0.4f | Actual: %0.4f" % (final_pre, data_dict_local["actual"]))
+        #area_histyy.set_title("Final Predicted: %0.4f | Actual: %0.4f" % (final_pre, data_dict_local["actual"]))
     else:
-        area_scatter.set_title("Explicit Predicted: %0.4f"% (data_dict_local["predicted"]))
-        area_histyy.set_title("Final Predicted: %0.4f"% (final_pre))
+        area_scatter.set_title("Fianl Predicted: %0.4f"% (final_pre))
+        #area_histyy.set_title("Final Predicted: %0.4f"% (final_pre))
     
-    area_scatter.barh(data_dict_local["effect_names"][data_dict_local["active_indice"][1:]][::-1].tolist(), data_dict_local["scores"][data_dict_local["active_indice"][1:]][::-1], )
+    area_scatter.barh(data_dict_local["effect_names"][data_dict_local["active_indice"]][::-1].tolist(), data_dict_local["scores"][data_dict_local["active_indice"]][::-1], )
     area_scatter.set_yticks(np.arange(len(data_dict_local["active_indice"])))
     
-    area_histy.set_title('importance')
-    if task_type == 'Classification':        
-        area_histy.pie([abs(data_dict_local['initial_predict'][0][0])*100,abs(data_dict_local['scores'][0])*100],labels=['explicit','implicit'],shadow=True,explode=[0,1],autopct="%0.2f%%")
-        area_histyy.bar(['explicit','implicit'],[data_dict_local['initial_predict'][0][0],data_dict_local['scores'][0]])
-    else:
-        area_histy.pie([abs(data_dict_local['predicted'][0][0])*100,abs(data_dict_local['scores'][0])*100],labels=['explicit','implicit'],shadow=True,explode=[0,1],autopct="%0.2f%%")
-        area_histyy.bar(['explicit','implicit'],[data_dict_local['predicted'][0][0],data_dict_local['scores'][0]])
+    #area_histy.set_title('importance')
+    #if task_type == 'Classification':        
+    #    area_histy.pie([abs(data_dict_local['initial_predict'][0][0])*100,abs(data_dict_local['scores'][0])*100],labels=['explicit','implicit'],shadow=True,explode=[0,1],autopct="%0.2f%%")
+    #    area_histyy.bar(['explicit','implicit'],[data_dict_local['initial_predict'][0][0],data_dict_local['scores'][0]])
+    #else:
+    #    area_histy.pie([abs(data_dict_local['predicted'][0][0])*100,abs(data_dict_local['scores'][0])*100],labels=['explicit','implicit'],shadow=True,explode=[0,1],autopct="%0.2f%%")
+    #    area_histyy.bar(['explicit','implicit'],[data_dict_local['predicted'][0][0],data_dict_local['scores'][0]])
     
     if save_eps:
         plt.savefig("local.eps", bbox_inches="tight", dpi=100)
