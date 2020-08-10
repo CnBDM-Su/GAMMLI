@@ -1,0 +1,338 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="English" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Get started &mdash; GAMMLI 1.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="GAMMLI" href="GAMMLI.html" />
+    <link rel="prev" title="GAMMLI" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> GAMMLI
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Get started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#demo">demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-preprocessing">Data preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-training">Model training</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#training-trajectory">Training trajectory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#feature-importance">Feature importance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#global-explain">Global explain</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#local-explain">Local explain</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#latent-group-explain">Latent group explain</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="GAMMLI.html">GAMMLI</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GAMMLI</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Get started</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/Get started.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="get-started">
+<h1>Get started<a class="headerlink" href="#get-started" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>The following environments are required for GAMMLI package:</p>
+<ul class="simple">
+<li><p>Python 3.7</p></li>
+<li><p>tensorflow 2.0.0</p></li>
+<li><p>networkx 2.4</p></li>
+<li><p>numpy 1.16.4</p></li>
+<li><p>pandas 0.23.4</p></li>
+<li><p>scikit-learn 0.21.2</p></li>
+</ul>
+</div>
+<div class="section" id="demo">
+<h2>demo<a class="headerlink" href="#demo" title="Permalink to this headline">¶</a></h2>
+<p>You can get started with the file demo.ipynb, which is a demo for using GAMMLI model:</p>
+<p><a class="reference external" href="https://github.com/CnBDM-Su/GAMMLI/blob/master/demo.ipynb">https://github.com/CnBDM-Su/GAMMLI/blob/master/demo.ipynb</a></p>
+</div>
+<div class="section" id="data-preprocessing">
+<h2>Data preprocessing<a class="headerlink" href="#data-preprocessing" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="k">import</span> <span class="n">train_test_split</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="k">import</span> <span class="n">mean_squared_error</span><span class="p">,</span><span class="n">roc_auc_score</span><span class="p">,</span><span class="n">mean_absolute_error</span><span class="p">,</span><span class="n">log_loss</span>
+<span class="kn">from</span> <span class="nn">gammli.GAMMLI</span> <span class="k">import</span> <span class="n">GAMMLI</span>
+<span class="kn">from</span> <span class="nn">gammli.DataReader</span> <span class="k">import</span> <span class="n">data_initialize</span>
+<span class="kn">from</span> <span class="nn">gammli.utils</span> <span class="k">import</span> <span class="n">local_visualize</span>
+<span class="kn">from</span> <span class="nn">gammli.utils</span> <span class="k">import</span> <span class="n">global_visualize_density</span>
+<span class="kn">from</span> <span class="nn">gammli.utils</span> <span class="k">import</span> <span class="n">feature_importance_visualize</span>
+<span class="kn">from</span> <span class="nn">gammli.utils</span> <span class="k">import</span> <span class="n">plot_trajectory</span>
+<span class="kn">from</span> <span class="nn">gammli.utils</span> <span class="k">import</span> <span class="n">plot_regularization</span>
+
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">compat</span><span class="o">.</span><span class="n">v1</span><span class="o">.</span><span class="n">enable_eager_execution</span><span class="p">()</span>
+<span class="n">random_state</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">data</span><span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;demo_data/simulation_regression.csv&#39;</span><span class="p">)</span>
+
+<span class="n">train</span> <span class="p">,</span> <span class="n">test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span> <span class="p">,</span><span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">task_type</span> <span class="o">=</span> <span class="s2">&quot;Regression&quot;</span>
+
+<span class="n">meta_info</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;uf_1&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;continues&#39;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;user&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;uf_2&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;continues&#39;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;user&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;uf_3&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;continues&#39;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;user&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;uf_4&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;continues&#39;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;user&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;uf_5&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;continues&#39;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;user&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;if_1&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;continues&#39;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;item&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;if_2&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;continues&#39;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;item&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;if_3&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;continues&#39;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;item&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;if_4&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;continues&#39;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;item&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;if_5&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;continues&#39;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;item&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;user_id&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;id&quot;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;user&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;item_id&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;id&quot;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;item&#39;</span><span class="p">}</span>
+<span class="n">meta_info</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;target&quot;</span><span class="p">,</span><span class="s1">&#39;source&#39;</span><span class="p">:</span><span class="s1">&#39;&#39;</span><span class="p">}</span>
+<span class="n">tr_x</span><span class="p">,</span> <span class="n">tr_Xi</span><span class="p">,</span> <span class="n">tr_y</span><span class="p">,</span> <span class="n">tr_idx</span><span class="p">,</span> <span class="n">te_x</span><span class="p">,</span> <span class="n">te_Xi</span><span class="p">,</span> <span class="n">te_y</span><span class="p">,</span> <span class="n">val_x</span><span class="p">,</span> <span class="n">val_Xi</span><span class="p">,</span> <span class="n">val_y</span><span class="p">,</span> <span class="n">val_idx</span><span class="p">,</span> <span class="n">meta_info</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span><span class="n">sy</span><span class="p">,</span><span class="n">sy_t</span> <span class="o">=</span> <span class="n">data_initialize</span><span class="p">(</span><span class="n">train</span><span class="p">,</span><span class="n">test</span><span class="p">,</span><span class="n">meta_info</span><span class="p">,</span><span class="n">task_type</span> <span class="p">,</span><span class="s1">&#39;warm&#39;</span><span class="p">,</span> <span class="n">random_state</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="model-training">
+<h2>Model training<a class="headerlink" href="#model-training" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">GAMMLI</span><span class="p">(</span><span class="n">wc</span><span class="o">=</span><span class="s1">&#39;warm&#39;</span><span class="p">,</span><span class="n">model_info</span><span class="o">=</span><span class="n">model_info</span><span class="p">,</span> <span class="n">meta_info</span><span class="o">=</span><span class="n">meta_info</span><span class="p">,</span> <span class="n">subnet_arch</span><span class="o">=</span><span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span><span class="n">interact_arch</span><span class="o">=</span><span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span><span class="n">activation_func</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">tanh</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="mf">0.2</span><span class="o">*</span><span class="n">tr_x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span> <span class="n">lr_bp</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">auto_tune</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+           <span class="n">interaction_epochs</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span><span class="n">main_effect_epochs</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span><span class="n">tuning_epochs</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span><span class="n">loss_threshold_main</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span><span class="n">loss_threshold_inter</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span><span class="n">alpha</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">combine_range</span><span class="o">=</span><span class="mf">0.85</span><span class="p">,</span>
+          <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">val_ratio</span><span class="o">=</span><span class="mf">0.125</span><span class="p">,</span> <span class="n">early_stop_thres</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span><span class="n">interact_num</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span><span class="n">u_group_num</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span><span class="n">i_group_num</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span><span class="n">scale_ratio</span><span class="o">=</span><span class="mf">0.94</span><span class="p">,</span><span class="n">n_power_iterations</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">n_oversamples</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+          <span class="n">mf_training_iters</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span><span class="n">change_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">convergence_threshold</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span><span class="n">max_rank</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">shrinkage_value</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span><span class="n">interaction_restrict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">tr_x</span><span class="p">,</span> <span class="n">val_x</span><span class="p">,</span> <span class="n">tr_y</span><span class="p">,</span> <span class="n">val_y</span><span class="p">,</span> <span class="n">tr_Xi</span><span class="p">,</span> <span class="n">val_Xi</span><span class="p">,</span> <span class="n">tr_idx</span><span class="p">,</span> <span class="n">val_idx</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="training-trajectory">
+<h2>Training trajectory<a class="headerlink" href="#training-trajectory" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">simu_dir</span> <span class="o">=</span> <span class="s1">&#39;result&#39;</span>
+<span class="n">data_dict_logs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">final_gam_model</span><span class="o">.</span><span class="n">summary_logs</span><span class="p">(</span><span class="n">save_dict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">data_dict_logs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;err_train_mf&quot;</span><span class="p">:</span><span class="n">model</span><span class="o">.</span><span class="n">final_mf_model</span><span class="o">.</span><span class="n">mf_mae</span><span class="p">,</span><span class="s2">&quot;err_val_mf&quot;</span><span class="p">:</span><span class="n">model</span><span class="o">.</span><span class="n">final_mf_model</span><span class="o">.</span><span class="n">mf_valmae</span><span class="p">})</span>
+<span class="n">plot_trajectory</span><span class="p">(</span><span class="n">data_dict_logs</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="n">simu_dir</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;s1_traj_plot&quot;</span><span class="p">,</span> <span class="n">log_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">save_png</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">save_eps</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="_images/trajectory.png"><img alt="_images/trajectory.png" class="align-center" src="_images/trajectory.png" style="width: 80%;" /></a>
+</div>
+<div class="section" id="feature-importance">
+<h2>Feature importance<a class="headerlink" href="#feature-importance" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data_dict</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">final_gam_model</span><span class="o">.</span><span class="n">global_explain</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">save_dict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">feature_importance_visualize</span><span class="p">(</span><span class="n">data_dict</span><span class="p">,</span> <span class="n">save_png</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="n">simu_dir</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;s1_feature&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="_images/feature_importance.png"><img alt="_images/feature_importance.png" class="align-center" src="_images/feature_importance.png" style="width: 80%;" /></a>
+</div>
+<div class="section" id="global-explain">
+<h2>Global explain<a class="headerlink" href="#global-explain" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">importance</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_all_rank</span><span class="p">(</span><span class="n">tr_Xi</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">dash_board</span><span class="p">(</span><span class="n">data_dict</span><span class="p">,</span> <span class="n">importance</span><span class="p">,</span><span class="n">simu_dir</span><span class="p">,</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="_images/global.png"><img alt="_images/global.png" class="align-center" src="_images/global.png" style="width: 80%;" /></a>
+<a class="reference internal image-reference" href="_images/latent.png"><img alt="_images/latent.png" class="align-center" src="_images/latent.png" style="width: 80%;" /></a>
+</div>
+<div class="section" id="local-explain">
+<h2>Local explain<a class="headerlink" href="#local-explain" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data_dict_local</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">local_explain</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="n">tr_x</span><span class="p">,</span><span class="n">tr_Xi</span><span class="p">,</span><span class="n">tr_y</span><span class="p">)</span>
+<span class="n">local_visualize</span><span class="p">(</span><span class="n">data_dict_local</span><span class="p">,</span> <span class="n">save_png</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="n">simu_dir</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;s1_local&#39;</span><span class="p">,</span><span class="n">task_type</span><span class="o">=</span><span class="s2">&quot;Regression&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="_images/local.png"><img alt="_images/local.png" class="align-center" src="_images/local.png" style="width: 80%;" /></a>
+</div>
+<div class="section" id="latent-group-explain">
+<h2>Latent group explain<a class="headerlink" href="#latent-group-explain" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">digraph</span><span class="p">(</span><span class="s1">&#39;implicit&#39;</span><span class="p">,</span><span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="_images/relation.png"><img alt="_images/relation.png" class="align-center" src="_images/relation.png" style="width: 100%;" /></a>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="GAMMLI.html" class="btn btn-neutral float-right" title="GAMMLI" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="GAMMLI" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, suyu
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
