@@ -14,11 +14,10 @@ import os
 import sys
 #sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../../gammli/'))
-import GAMMLI
 
 # -- Project information -----------------------------------------------------
 
-project = 'LVXNN'
+project = 'GAMMLI'
 copyright = '2020, suyu'
 author = 'suyu'
 
