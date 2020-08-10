@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Get started &mdash; LVXNN 1.0 documentation</title>
+  <title>Get started &mdash; GAMMLI 1.0 documentation</title>
   
 
   
@@ -51,7 +51,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> LVXNN
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> GAMMLI
           
 
           
@@ -113,7 +113,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">LVXNN</a>
+          <a href="index.html">GAMMLI</a>
         
       </nav>
 
@@ -167,7 +167,7 @@
 <h1>Get started<a class="headerlink" href="#get-started" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
-<p>The following environments are required for LVXNN package:</p>
+<p>The following environments are required for GAMMLI package:</p>
 <ul class="simple">
 <li><p>Python 3.7</p></li>
 <li><p>tensorflow 2.0.0</p></li>
@@ -179,8 +179,8 @@
 </div>
 <div class="section" id="demo">
 <h2>demo<a class="headerlink" href="#demo" title="Permalink to this headline">¶</a></h2>
-<p>You can get started with the file demo.ipynb, which is a demo for using LVXNN model:</p>
-<p><a class="reference external" href="https://github.com/CnBDM-Su/LV_XNN/blob/master/demo.ipynb">https://github.com/CnBDM-Su/LV_XNN/blob/master/demo.ipynb</a></p>
+<p>You can get started with the file demo.ipynb, which is a demo for using GAMMLI model:</p>
+<p><a class="reference external" href="https://github.com/CnBDM-Su/GAMMLI/blob/master/demo.ipynb">https://github.com/CnBDM-Su/GAMMLI/blob/master/demo.ipynb</a></p>
 </div>
 <div class="section" id="data-preprocessing">
 <h2>Data preprocessing<a class="headerlink" href="#data-preprocessing" title="Permalink to this headline">¶</a></h2>
@@ -190,13 +190,13 @@
 <span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="k">import</span> <span class="n">mean_squared_error</span><span class="p">,</span><span class="n">roc_auc_score</span><span class="p">,</span><span class="n">mean_absolute_error</span><span class="p">,</span><span class="n">log_loss</span>
-<span class="kn">from</span> <span class="nn">lvxnn.LVXNN</span> <span class="k">import</span> <span class="n">LV_XNN</span>
-<span class="kn">from</span> <span class="nn">lvxnn.DataReader</span> <span class="k">import</span> <span class="n">data_initialize</span>
-<span class="kn">from</span> <span class="nn">lvxnn.utils</span> <span class="k">import</span> <span class="n">local_visualize</span>
-<span class="kn">from</span> <span class="nn">lvxnn.utils</span> <span class="k">import</span> <span class="n">global_visualize_density</span>
-<span class="kn">from</span> <span class="nn">lvxnn.utils</span> <span class="k">import</span> <span class="n">feature_importance_visualize</span>
-<span class="kn">from</span> <span class="nn">lvxnn.utils</span> <span class="k">import</span> <span class="n">plot_trajectory</span>
-<span class="kn">from</span> <span class="nn">lvxnn.utils</span> <span class="k">import</span> <span class="n">plot_regularization</span>
+<span class="kn">from</span> <span class="nn">gammli.GAMMLI</span> <span class="k">import</span> <span class="n">GAMMLI</span>
+<span class="kn">from</span> <span class="nn">gammli.DataReader</span> <span class="k">import</span> <span class="n">data_initialize</span>
+<span class="kn">from</span> <span class="nn">gammli.utils</span> <span class="k">import</span> <span class="n">local_visualize</span>
+<span class="kn">from</span> <span class="nn">gammli.utils</span> <span class="k">import</span> <span class="n">global_visualize_density</span>
+<span class="kn">from</span> <span class="nn">gammli.utils</span> <span class="k">import</span> <span class="n">feature_importance_visualize</span>
+<span class="kn">from</span> <span class="nn">gammli.utils</span> <span class="k">import</span> <span class="n">plot_trajectory</span>
+<span class="kn">from</span> <span class="nn">gammli.utils</span> <span class="k">import</span> <span class="n">plot_regularization</span>
 
 <span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
 <span class="n">tf</span><span class="o">.</span><span class="n">compat</span><span class="o">.</span><span class="n">v1</span><span class="o">.</span><span class="n">enable_eager_execution</span><span class="p">()</span>
@@ -227,7 +227,7 @@
 </div>
 <div class="section" id="model-training">
 <h2>Model training<a class="headerlink" href="#model-training" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">LV_XNN</span><span class="p">(</span><span class="n">wc</span><span class="o">=</span><span class="s1">&#39;warm&#39;</span><span class="p">,</span><span class="n">model_info</span><span class="o">=</span><span class="n">model_info</span><span class="p">,</span> <span class="n">meta_info</span><span class="o">=</span><span class="n">meta_info</span><span class="p">,</span> <span class="n">subnet_arch</span><span class="o">=</span><span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span><span class="n">interact_arch</span><span class="o">=</span><span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span><span class="n">activation_func</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">tanh</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="mf">0.2</span><span class="o">*</span><span class="n">tr_x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span> <span class="n">lr_bp</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">auto_tune</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">GAMMLI</span><span class="p">(</span><span class="n">wc</span><span class="o">=</span><span class="s1">&#39;warm&#39;</span><span class="p">,</span><span class="n">model_info</span><span class="o">=</span><span class="n">model_info</span><span class="p">,</span> <span class="n">meta_info</span><span class="o">=</span><span class="n">meta_info</span><span class="p">,</span> <span class="n">subnet_arch</span><span class="o">=</span><span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span><span class="n">interact_arch</span><span class="o">=</span><span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span><span class="n">activation_func</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">tanh</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="mf">0.2</span><span class="o">*</span><span class="n">tr_x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span> <span class="n">lr_bp</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">auto_tune</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
            <span class="n">interaction_epochs</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span><span class="n">main_effect_epochs</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span><span class="n">tuning_epochs</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span><span class="n">loss_threshold_main</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span><span class="n">loss_threshold_inter</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span><span class="n">alpha</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">combine_range</span><span class="o">=</span><span class="mf">0.85</span><span class="p">,</span>
           <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">val_ratio</span><span class="o">=</span><span class="mf">0.125</span><span class="p">,</span> <span class="n">early_stop_thres</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span><span class="n">interact_num</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span><span class="n">u_group_num</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span><span class="n">i_group_num</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span><span class="n">scale_ratio</span><span class="o">=</span><span class="mf">0.94</span><span class="p">,</span><span class="n">n_power_iterations</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">n_oversamples</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
           <span class="n">mf_training_iters</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span><span class="n">change_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">convergence_threshold</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span><span class="n">max_rank</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">shrinkage_value</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span><span class="n">interaction_restrict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>

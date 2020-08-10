@@ -4,7 +4,7 @@ Get started
 Installation
 ----------------
 
-The following environments are required for LVXNN package:
+The following environments are required for GAMMLI package:
 
 - Python 3.7
 - tensorflow 2.0.0
@@ -19,9 +19,9 @@ The following environments are required for LVXNN package:
 demo
 ---------------------
 
-You can get started with the file demo.ipynb, which is a demo for using LVXNN model:
+You can get started with the file demo.ipynb, which is a demo for using GAMMLI model:
 
-https://github.com/CnBDM-Su/LV_XNN/blob/master/demo.ipynb
+https://github.com/CnBDM-Su/GAMMLI/blob/master/demo.ipynb
 
 Data preprocessing
 -----------------------------------
@@ -34,13 +34,13 @@ Data preprocessing
     from collections import OrderedDict
     import time
     from sklearn.metrics import mean_squared_error,roc_auc_score,mean_absolute_error,log_loss
-    from lvxnn.LVXNN import LV_XNN
-    from lvxnn.DataReader import data_initialize
-    from lvxnn.utils import local_visualize
-    from lvxnn.utils import global_visualize_density
-    from lvxnn.utils import feature_importance_visualize
-    from lvxnn.utils import plot_trajectory
-    from lvxnn.utils import plot_regularization
+    from gammli.GAMMLI import GAMMLI
+    from gammli.DataReader import data_initialize
+    from gammli.utils import local_visualize
+    from gammli.utils import global_visualize_density
+    from gammli.utils import feature_importance_visualize
+    from gammli.utils import plot_trajectory
+    from gammli.utils import plot_regularization
 
     import tensorflow as tf
     tf.compat.v1.enable_eager_execution()
@@ -73,7 +73,7 @@ Model training
 
 .. code-block::
 
-    model = LV_XNN(wc='warm',model_info=model_info, meta_info=meta_info, subnet_arch=[20, 10],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=min(500, int(0.2*tr_x.shape[0])), lr_bp=0.001, auto_tune=False,
+    model = GAMMLI(wc='warm',model_info=model_info, meta_info=meta_info, subnet_arch=[20, 10],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=min(500, int(0.2*tr_x.shape[0])), lr_bp=0.001, auto_tune=False,
                interaction_epochs=300,main_effect_epochs=1000,tuning_epochs=100,loss_threshold_main=0.1,loss_threshold_inter=0.5,alpha=0,combine_range=0.85,
               verbose=True,val_ratio=0.125, early_stop_thres=100,interact_num=10,u_group_num=30,i_group_num=50,scale_ratio=0.94,n_power_iterations=5,n_oversamples=0,
               mf_training_iters=500,change_mode=True,convergence_threshold=0.001,max_rank=5,shrinkage_value=20,interaction_restrict=True)
