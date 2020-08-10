@@ -1,4 +1,4 @@
-# LV_XNN
+# GAMMLI
 an explainable recommendation system algorithm
 
 Input data format: user feature+ item feature + userid + itemid + target
