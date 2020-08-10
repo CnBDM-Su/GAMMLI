@@ -1,12 +1,12 @@
-.. LVXNN documentation master file, created by
+.. GAMMLI documentation master file, created by
    sphinx-quickstart on Mon Jul 27 09:09:57 2020.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-LVXNN
+GAMMLI
 =================================
 
-LVXNN(latent variable explainable neural network) is an open source python package for constructing an explainable machine learning model in the recommendation scenario.
+GAMMLI(Generalized Additive Models with Manifest and Latent Interactions) is an open source python package for constructing an explainable machine learning model in the recommendation scenario.
 
 
 
@@ -32,10 +32,10 @@ API
 .. toctree::
    :maxdepth: 2
 
-   LVXNN.rst
+   GAMMLI.rst
 
 
 
 References
 ====================
-Guo, Su, Yang and Zhang. "Explainable Recommendation Systems by LVxNN" 2020.
+Guo, Su, Yang and Zhang. "Explainable Recommender Systems by Generalized Additive Models with Manifest and Latent Interactions" 2020.

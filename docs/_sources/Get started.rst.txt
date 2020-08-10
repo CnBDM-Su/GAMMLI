@@ -80,7 +80,7 @@ Model training
     model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
 
 
-Training trajectory and regularization
+Training trajectory
 -----------------------------------
 
 .. code-block::
@@ -89,15 +89,11 @@ Training trajectory and regularization
     data_dict_logs = model.final_gam_model.summary_logs(save_dict=False)
     data_dict_logs.update({"err_train_mf":model.final_mf_model.mf_mae,"err_val_mf":model.final_mf_model.mf_valmae})
     plot_trajectory(data_dict_logs, folder=simu_dir, name="s1_traj_plot", log_scale=True, save_png=False, save_eps=False)
-    plot_regularization(data_dict_logs, folder=simu_dir, name="s1_regu_plot", log_scale=True, save_png=False, save_eps=False)
 
 .. image:: /demo_image/trajectory.png
     :width: 80%
     :align: center
 
-.. image:: /demo_image/regularization.png
-    :width: 80%
-    :align: center
 
 
 Feature importance
@@ -117,10 +113,15 @@ Global explain
 
 .. code-block::
 
-    global_visualize_density(data_dict, save_png=False, folder=simu_dir, name='s1_global')
+    importance = model.get_all_rank(tr_Xi)
+    model.dash_board(data_dict, importance,simu_dir,False)
 
 
 .. image:: /demo_image/global.png
+    :width: 80%
+    :align: center
+
+.. image:: /demo_image/latent.png
     :width: 80%
     :align: center
 
@@ -137,19 +138,8 @@ Local explain
     :width: 80%
     :align: center
 
+
 Latent group explain
------------------------------------
-
-.. code-block::
-
-    model.mf_distance(0.6,'user')
-
-
-.. image:: /demo_image/lae.png
-    :width: 60%
-    :align: center
-
-Latent group preference explain
 -----------------------------------
 
 .. code-block::
@@ -158,5 +148,5 @@ Latent group preference explain
 
 
 .. image:: /demo_image/relation.png
-    :width: 60%
+    :width: 100%
     :align: center

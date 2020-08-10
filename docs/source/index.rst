@@ -32,10 +32,10 @@ API
 .. toctree::
    :maxdepth: 2
 
-   LVXNN.rst
+   GAMMLI.rst
 
 
 
 References
 ====================
-Guo, Su, Yang and Zhang. "Explainable Recommendation Systems by LVxNN" 2020.
+Guo, Su, Yang and Zhang. "Explainable Recommender Systems by Generalized Additive Models with Manifest and Latent Interactions" 2020.
