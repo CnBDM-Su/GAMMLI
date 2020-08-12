@@ -85,9 +85,9 @@ def get_interaction_list(tr_x, val_x, tr_y, val_y, pred_tr, pred_val, feature_li
             interaction_indices = [item for item in combinations(range(len(preprocessor_.col_types_)), 2)]
         
         for pair in interaction_indices:
-            if (pair[0] in active_main_effect_index) or (pair[1] in active_main_effect_index):
-                score = native_ebm.fast_interaction_score(pair)
-                interaction_scores.append((pair, score))
+            #if (pair[0] in active_main_effect_index) or (pair[1] in active_main_effect_index):
+            score = native_ebm.fast_interaction_score(pair)
+            interaction_scores.append((pair, score))
 
         ranked_scores = list(
             sorted(interaction_scores, key=lambda item: item[1], reverse=True)

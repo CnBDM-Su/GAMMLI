@@ -410,7 +410,8 @@ class OutputLayer(tf.keras.layers.Layer):
             self.interaction_output_bias = self.add_weight(name="multi_interaction_output_bias",
                                            shape=[self.multi_type_num],
                                            initializer=tf.zeros_initializer(),
-                                           trainable=True)         
+                                           trainable=True)   
+            
             
     def call(self, inputs):
         self.input_main_effect = inputs[:,:self.input_num]

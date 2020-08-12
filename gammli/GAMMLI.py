@@ -670,6 +670,17 @@ class GAMMLI:
     
     def dash_board(self,data_dict, importance, simu_dir, save_eps=True):
         
+        """
+        Show a dashboard for global explain, which contains the explanation of main effects, manifest interactions and latent interactions.
+
+        :param dict data_dict: explanation data for plotting.
+        :param array importance: importance of each effects.
+        :param str simu_dir: storage path.
+        :param bool save_eps: whether save the eps of dashboard.
+        
+        :return: Showing dashboard.
+        """
+        
         im_list = importance.tolist()
         for i,j in data_dict.items():
             importance_ = im_list.pop(0)
@@ -773,8 +784,17 @@ class GAMMLI:
         
         
         
-    def get_all_rank(self,Xi):
-        beta, gamma = self.final_gam_model.get_component()
+    def get_all_rank(self,Xi,tr_x):
+        
+        """
+        Get importance of each effects.
+
+        :param array Xi: implicit effect feature in training set.
+        
+        :return: array of importance.
+        """
+        
+        beta, gamma = self.final_gam_model.get_component(tr_x)
         delta = np.array(self.final_mf_model.rank_norm(Xi)).reshape(-1,1)
         componment_coefs= np.vstack([beta, gamma, delta])
         
