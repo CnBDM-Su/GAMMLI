@@ -59,7 +59,7 @@ def xgb(wc, data, meta_info_ori, task_type="Regression", random_state=0):
                 try:
                     [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]
                     print('no cold samples')
-                    return
+                    continue
                 except:
                     cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                     cold_pred = pred_test[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
@@ -115,7 +115,7 @@ def xgb(wc, data, meta_info_ori, task_type="Regression", random_state=0):
                 try:
                     [(te_Xi[:,1] != 'cold') & (te_Xi[:,0] != 'cold')] != [True]
                     print('no cold samples')
-                    return
+                    continue
                 except:
                     cold_y = te_y[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]
                     cold_pred = pred_test[(te_Xi[:,1] == 'cold') | (te_Xi[:,0] == 'cold')]

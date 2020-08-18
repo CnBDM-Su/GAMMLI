@@ -62,7 +62,7 @@ def gammli( wc, data, meta_info_ori, task_type="Regression", random_state=0, par
             model = GAMMLI(model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=min(500, int(0.2*tr_x.shape[0])), lr_bp=0.001, auto_tune=False,
                            interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,combine_range=best_combine_range,
                            verbose=verbose, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=best_ratio,n_power_iterations=5,n_oversamples=0,
-                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,wc=wc,interaction_restrict='intra')
+                           mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.0001,max_rank=rank,wc='warm',interaction_restrict='intra')
     
             model.fit(tr_x, val_x, tr_y, val_y, tr_Xi, val_Xi, tr_idx, val_idx)
             
@@ -137,7 +137,7 @@ def gammli( wc, data, meta_info_ori, task_type="Regression", random_state=0, par
             tr_x, tr_Xi, tr_y, tr_idx, te_x, te_Xi, te_y, val_x, val_Xi, val_y, val_idx, meta_info, model_info ,sy, sy_t= data_initialize(train, test, meta_info_ori, task_type, 'warm', random_state=0, verbose=False)
 
 
-            model = GAMMLI(wc=wc,model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=min(500, int(0.2*tr_x.shape[0])), lr_bp=0.001, auto_tune=False,
+            model = GAMMLI(wc='warm',model_info=model_info, meta_info=meta_info, subnet_arch=[8, 16],interact_arch=[20, 10],activation_func=tf.tanh, batch_size=min(500, int(0.2*tr_x.shape[0])), lr_bp=0.001, auto_tune=False,
                            interaction_epochs=interaction_epochs,main_effect_epochs=main_effect_epochs,tuning_epochs=tuning_epochs,loss_threshold_main=0.01,loss_threshold_inter=0.01,combine_range=best_combine_range,
                            verbose=verbose, early_stop_thres=100,interact_num=10,u_group_num=u_group_num,i_group_num=i_group_num,scale_ratio=best_ratio,n_power_iterations=5,n_oversamples=0,
                            mf_training_iters=mf_training_iters,change_mode=True,convergence_threshold=0.001,max_rank=rank,interaction_restrict='intra')

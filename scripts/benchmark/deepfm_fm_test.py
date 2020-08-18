@@ -61,12 +61,12 @@ def deepfm_fm(wc, data, meta_info_ori, task_type="Regression", random_state=0, p
             "deep_layers_activation": tf.nn.relu,
             "loss_type" : loss_type,
             "epoch": epochs ,
-            "batch_size": 500,
-            "learning_rate": 0.01,
+            "batch_size": 1000,
+            "learning_rate": 0.001,
             "optimizer_type": "adam",
             "batch_norm": 0,
             "batch_norm_decay": 0.995,
-            "l2_reg": 0.01,
+            "l2_reg": 0.1,
             "greater_is_better" : greater_is_better,
         "verbose": verbose,
         "eval_metric": eval_metric,
@@ -143,9 +143,10 @@ def deepfm_fm(wc, data, meta_info_ori, task_type="Regression", random_state=0, p
                 dfTrain = train
                 dfTest = test
                 
-                #dfTrain = dfTrain.astype(str)
-                #dfTest = dfTest.astype(str)
-                
+                #dfTrain.user_id = dfTrain.user_id.astype(int).astype(str)
+                #dfTrain.item_id = dfTrain.item_id.astype(int).astype(str)
+                #dfTrain.target = dfTrain.target.astype(str)
+
                 
                 #posi = dfTrain.shape[1]-3
                 
